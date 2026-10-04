@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Impostor — Biología</title>
+<style>
+  :root{
+    --teal:#00A8A8; --teal-dark:#008B8B;
+    --yellow:#FFC94D; --coral:#FF7B6B; --violet:#8C6FE8; --green:#4CC9A0;
+    --paper:#FAF7F2; --card:#FFFFFF; --ink:#33384D; --ink-soft:#6B7186;
+    --border:#E8E2D8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; overflow:hidden}
+  body{
+    font-family:"Segoe UI", Verdana, system-ui, sans-serif;
+    background:var(--paper); color:var(--ink);
+  }
+  .screen{display:none; width:100%; height:100%;
+    flex-direction:column; align-items:center; justify-content:center;
+    animation:fade .35s ease}
+  .screen.on{display:flex}
+  #scr-rules,#scr-done,#scr-level{flex-direction:row; gap:10px; padding:0 30px; justify-content:center}
+  #scr-play{flex-direction:column; padding:0; justify-content:flex-start}
+  @keyframes fade{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+
+  /* ---------- welcome ---------- */
+  .welcome-wrap{display:flex; align-items:center; gap:32px; width:100%;
+    max-width:1560px; padding:0 24px; justify-content:center}
+  .welcome-left{display:flex; flex-direction:column; align-items:center; gap:18px; flex:0 0 440px}
+  .logo-img{width:440px; max-width:100%; filter:drop-shadow(0 8px 14px rgba(51,56,77,.15))}
+  .welcome-left p{font-size:20px; color:#4A4A4A; max-width:380px; text-align:center}
+  @media(min-width:1500px){
+    .welcome-left{flex-basis:530px} .logo-img{width:530px}
+    .welcome-left p{font-size:22px; max-width:460px}
+    .panel{max-width:540px}
+    #scr-welcome .mcol img{transform:scale(1.2); transform-origin:bottom right}
+  }
+  @media(max-width:1499px){
+    .welcome-left{flex-basis:340px} .logo-img{width:340px}
+    .welcome-left p{font-size:16px; max-width:300px}
+    .panel{max-width:420px; padding:22px 26px}
+    .rank-panel{width:240px; padding:16px 18px}
+    .rank-panel h3{font-size:18px}
+    .rank-name{font-size:14px}
+    .rank-meta{font-size:11px}
+    .rank-sec{font-size:12px}
+    .welcome-wrap{gap:18px}
+  }
+  @media(max-width:1150px){
+    .welcome-left{flex-basis:330px} .logo-img{width:330px}
+    .welcome-left p{font-size:15px; max-width:290px}
+    .welcome-wrap{gap:16px}
+    .rank-panel{display:none}
+  }
+  @media(max-width:899px){
+    .welcome-wrap{flex-direction:column; gap:14px}
+    .welcome-left{flex:none} .logo-img{width:280px}
+    #scr-welcome .mcol img{margin-right:0; max-height:140px}
+    #scr-welcome .mcol{align-self:center}
+    .welcome-left p{font-size:16px; max-width:340px}
+  }
+  /* ---------- ranking mejores jugadores ---------- */
+  .rank-panel{background:var(--card); border:2px solid var(--border); border-radius:20px;
+    padding:20px 24px; width:330px; flex:none; box-shadow:0 6px 24px rgba(51,56,77,.07);
+    align-self:center}
+  .rank-panel h3{font-size:21px; color:var(--teal); text-align:center; margin-bottom:10px}
+  .rank-sec{font-size:14px; font-weight:800; letter-spacing:1px; color:var(--ink-soft);
+    text-transform:uppercase; margin:10px 0 6px; border-top:2px solid var(--border); padding-top:10px}
+  .rank-sec:first-of-type{border-top:none; padding-top:0; margin-top:0}
+  .rank-row{display:flex; align-items:center; gap:10px; padding:5px 0; min-height:38px}
+  .rank-num{width:26px; height:26px; flex:none; border-radius:50%; background:var(--yellow);
+    color:var(--ink); font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center}
+  .rank-row:nth-child(2) .rank-num{background:var(--teal); color:#fff}
+  .rank-name{font-size:16px; font-weight:700; color:var(--ink); flex:1; line-height:1.15}
+  .rank-meta{font-size:12px; color:var(--ink-soft); font-weight:600; display:block}
+  .rank-empty{color:var(--ink-soft); font-size:14px; font-style:italic}
+  .rank-legend{font-size:12px; color:var(--ink-soft); text-align:center; margin-top:10px}
+  .panel{background:var(--card); border:2px solid var(--border); border-radius:20px;
+    padding:26px 34px; width:100%; max-width:500px;
+    box-shadow:0 6px 24px rgba(51,56,77,.07)}
+  .panel h2{font-size:25px; margin-bottom:8px; color:var(--ink); white-space:nowrap}
+  label{display:block; font-size:16px; font-weight:600; color:var(--ink-soft); margin:12px 0 6px}
+  input[type=text]{width:100%; font-size:18px; padding:11px 14px; border:2px solid var(--border);
+    border-radius:12px; outline:none; transition:border .15s; background:#fff; color:var(--ink)}
+  input[type=text]:focus{border-color:var(--teal)}
+  input[type=text].missing{border-color:var(--coral)}
+  .sec-btns.missing button{border-color:var(--coral)}
+  .row2{display:flex; flex-direction:column; gap:0}
+  .sec-btns{display:flex; gap:12px}
+  .sec-btns button{flex:1; font-size:19px; font-weight:700; padding:11px;
+    border:2px solid var(--border); border-radius:12px; background:#fff; color:var(--ink);
+    cursor:pointer; transition:all .15s}
+  .sec-btns button:hover{border-color:var(--teal)}
+  .sec-btns button.sel{border-color:var(--teal); background:var(--teal); color:#fff;
+    transform:scale(1.04)}
+  .cta{margin-top:20px; width:100%; font-size:22px; font-weight:700; color:#fff;
+    background:var(--teal); border:none; border-radius:14px; padding:15px; cursor:pointer;
+    transition:background .15s, transform .1s}
+  .cta:hover{background:var(--teal-dark)}
+  .cta:active{transform:scale(.98)}
+  .cta.alt{background:var(--violet)}
+  .cta.alt:hover{background:#7A5FD6}
+  .code-hint{font-size:15px; color:#4A4A4A; margin-top:6px; text-align:center}
+  .code-link{display:block; font-size:15px; color:var(--teal); margin-top:12px;
+    text-align:center; cursor:pointer; text-decoration:underline; background:none;
+    border:none; padding:0}
+  #code-area{display:none}
+  #code-area.open{display:block}
+  .err{color:var(--coral); font-size:16px; font-weight:600; margin-top:8px; min-height:16px; text-align:center}
+
+  /* ---------- rules ---------- */
+  .rules{display:flex; flex-direction:column; align-items:center; gap:8px;
+    max-width:760px; padding:0 40px; text-align:center}
+  .rules h1{color:var(--teal); font-size:40px; margin-bottom:10px}
+  .rules li{font-size:20px; margin:9px 0; line-height:1.4; list-style:none}
+  .rules b{color:var(--teal)}
+  .rules .num{display:inline-block; width:28px; height:28px; line-height:28px;
+    border-radius:50%; background:var(--violet); color:#fff; font-weight:800;
+    font-size:15px; text-align:center; margin-right:8px; vertical-align:middle}
+  .rules ul{list-style:none}
+  .example{display:flex; gap:10px; margin:14px 0; width:100%; max-width:560px}
+  .example div{flex:1; background:#fff; border:2px solid var(--border); border-radius:12px;
+    padding:13px 8px; text-align:center; font-weight:700; font-size:17px}
+  .example div.bad{border-color:var(--coral); background:#FFF1EF; color:var(--coral)}
+  .rules .cta{max-width:340px}
+
+  /* ---------- game top bar ---------- */
+  .play-top{width:100%; height:70px; flex:none; display:flex; align-items:center;
+    justify-content:space-between; gap:18px; padding:0 30px}
+  .play-top-right{display:flex; align-items:center; gap:16px}
+  .sesion-txt{font-size:19px; font-weight:800; color:var(--teal); white-space:nowrap}
+  .sesion-txt.boss{color:var(--coral)}
+  .who{font-size:25px; font-weight:600; color:var(--ink-soft)}
+  .who b{color:var(--ink)}
+  .levelpill{background:var(--teal); color:#fff; font-weight:700; font-size:23px;
+    padding:9px 20px; border-radius:999px}
+  .levelpill.boss{background:var(--coral)}
+  .ring{width:64px; height:64px; position:relative; flex:none}
+  .ring svg{width:64px; height:64px; transform:rotate(-90deg)}
+  .ring circle{fill:none; stroke-width:7}
+  .ring-bg{stroke:#EDE6DA}
+  .ring-fg{stroke:var(--teal); stroke-linecap:round; stroke-dasharray:176; stroke-dashoffset:0; transition:stroke .3s}
+  .ring.warn .ring-fg{stroke:var(--yellow)}
+  .ring.crit .ring-fg{stroke:var(--coral)}
+  .ring.crit{animation:ringpulse 1s infinite}
+  @keyframes ringpulse{50%{transform:scale(1.07)}}
+  .ring-num{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:20px; color:var(--ink)}
+  .progress{display:flex; gap:7px}
+  .dot{width:20px; height:20px; border-radius:50%; background:var(--border)}
+  .dot.ok{background:var(--green)} .dot.bad{background:var(--coral)}
+  .dot.cur{background:var(--yellow); outline:3px solid #FFE6AE; animation:pulse 1s infinite}
+  @keyframes pulse{50%{transform:scale(1.25)}}
+
+  .play-mid{flex:1; width:100%; min-height:0; display:flex; flex-direction:column;
+    align-items:center; padding:0 20px}
+  .consigna-tag{font-size:23px; font-weight:700; letter-spacing:1.5px; color:var(--teal); text-transform:uppercase}
+  .consigna{font-size:38px; font-weight:700; margin-top:14px; max-width:900px; line-height:1.25; text-align:center}
+
+  .cards{display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr);
+    gap:24px; width:min(1100px,100%); flex:1; min-height:0; margin:14px 0 42px}
+  .tcard{background:var(--card); border:3px solid var(--border); border-radius:18px;
+    padding:12px 14px; cursor:pointer; text-align:center;
+    transition:transform .12s, border .15s, box-shadow .15s;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    min-height:0; justify-content:flex-start}
+  .tcard:hover{transform:translateY(-4px); border-color:var(--teal);
+    box-shadow:0 10px 22px rgba(0,168,168,.15)}
+  .tcard img{flex:1; min-height:0; width:auto; max-width:82%; object-fit:contain}
+  .tcard .fallback{flex:1; min-height:0; width:100%; display:flex; align-items:center;
+    justify-content:center; background:#F2F8F8; border-radius:14px; font-size:60px}
+  .tcard .lbl{font-size:21px; font-weight:700; line-height:1.2; min-height:2.4em;
+    display:flex; align-items:center; justify-content:center; flex:none}
+  .tcard.picked{transform:scale(1.03)}
+  .tcard.was-imp{border-color:var(--coral); background:#FFF1EF; animation:shake .4s}
+  .tcard.was-ok{border-color:var(--green); opacity:.75}
+  .tcard.disabled{cursor:default}
+  .tcard.disabled:hover{transform:none; box-shadow:none}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  @media(max-width:1365px){
+    .consigna{font-size:33px; margin-top:10px}
+    .consigna-tag{font-size:20px}
+    .cards{gap:16px; margin:10px 0 40px}
+    .who{font-size:21px}
+    .levelpill{font-size:20px; padding:8px 18px}
+    .ring,.ring svg{width:56px; height:56px}
+    .ring-num{font-size:17px}
+  }
+  @media(max-width:899px){
+    #scr-play{overflow-y:auto; height:auto; min-height:100%}
+    .play-top{height:60px; padding:0 16px}
+    .who{font-size:18px}
+    .consigna{font-size:26px}
+    .cards{grid-template-rows:none; grid-auto-rows:minmax(170px,auto); flex:none; gap:12px; margin-bottom:50px}
+    .tcard img{max-height:110px}
+    .tcard .lbl{font-size:17px}
+    .play-mid{padding:0 12px}
+    .ring,.ring svg{width:48px; height:48px}
+    .ring-num{font-size:15px}
+  }
+
+  /* ---------- feedback overlay ---------- */
+  .overlay{position:fixed; inset:0; display:none; align-items:flex-end; justify-content:center;
+    background:rgba(51,56,77,.12); z-index:20}
+  .overlay.on{display:flex; animation:fade .25s}
+  .feedback-card{background:var(--card); border-radius:22px; padding:24px 36px; margin-bottom:26px;
+    max-width:640px; width:90%; text-align:center; font-size:21px; line-height:1.5;
+    box-shadow:0 16px 48px rgba(51,56,77,.25); animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes pop{from{transform:scale(.8); opacity:0} to{transform:scale(1); opacity:1}}
+  .feedback-card.win{border-top:8px solid var(--green)}
+  .feedback-card.lose{border-top:8px solid var(--coral)}
+  .feedback-card .head{font-weight:800; font-size:27px; margin-bottom:8px}
+  .feedback-card.win .head{color:#1E8F6E} .feedback-card.lose .head{color:var(--coral)}
+  .next{margin-top:18px; font-size:19px; font-weight:700; color:#fff; background:var(--teal);
+    border:none; border-radius:12px; padding:13px 40px; cursor:pointer}
+  .next:hover{background:var(--teal-dark)}
+
+  /* ---------- countdown ---------- */
+  .count-overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:var(--paper); z-index:30}
+  .count-overlay.on{display:flex}
+  .count-num{font-size:150px; font-weight:900; color:var(--teal);
+    animation:countpop .8s cubic-bezier(.34,1.56,.64,1)}
+  .count-num.go{color:var(--coral); font-size:90px}
+  @keyframes countpop{0%{transform:scale(.2); opacity:0} 40%{transform:scale(1.15)} 100%{transform:scale(1); opacity:1}}
+
+  /* ---------- confetti canvas ---------- */
+  #confetti{position:fixed; inset:0; pointer-events:none; z-index:40}
+
+  /* ---------- encounter end / code ---------- */
+  .done-card{background:var(--card); border:2px solid var(--border); border-radius:22px;
+    padding:32px 44px; text-align:center; max-width:620px; width:92%;
+    box-shadow:0 8px 30px rgba(51,56,77,.08)}
+  .done-card .logo-img{width:230px}
+  .done-card h1{color:var(--teal); font-size:35px; margin-top:6px}
+  .stars{font-size:38px; margin:8px 0; letter-spacing:6px}
+  .score-line{font-size:21px; margin:6px 0; color:var(--ink-soft)}
+  .codebox{margin:6px auto 10px; background:var(--ink); color:var(--yellow);
+    font-family:"Courier New",monospace; font-size:17px; font-weight:700;
+    letter-spacing:2px; padding:12px 16px; border-radius:14px;
+    word-break:break-all; user-select:all; display:block; max-width:560px}
+  .code-note{font-size:15px; color:var(--ink-soft); margin:12px 0 4px}
+  .saved-line{display:flex; align-items:center; justify-content:center; gap:8px;
+    margin:14px 0 2px; font-size:17px; color:#1E8F6E; font-weight:600}
+  .saved-line .tick{display:inline-block; width:22px; height:22px; line-height:22px;
+    border-radius:50%; background:var(--green); color:#fff; font-weight:800; font-size:13px}
+
+  /* ---------- mascot ---------- */
+  .mcol{flex:0 0 150px; display:flex; align-items:center; justify-content:flex-end; align-self:stretch}
+  /* mascot flotante: no ocupa ancho en las pantallas de tarjeta centrada */
+  #scr-rules .mcol, #scr-done .mcol, #scr-level .mcol, #scr-welcome .mcol{flex:0 0 0; overflow:visible}
+  .play-mascot{position:fixed; bottom:58px; z-index:0; pointer-events:none;
+    display:block; flex:none}
+  .play-mascot img{transform:none; animation:floaty2 3.2s ease-in-out infinite}
+  @keyframes floaty2{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  @media(max-width:1279px){.play-mascot{display:none}}
+  .mcol img{height:400px; pointer-events:none; position:relative; z-index:2;
+    transform:translateX(62px);
+    filter:drop-shadow(0 10px 14px rgba(51,56,77,.18));
+    animation:floaty 3.2s ease-in-out infinite}
+  @keyframes floaty{0%,100%{transform:translateX(62px) translateY(0)}50%{transform:translateX(62px) translateY(-14px)}}
+  @media(max-width:1150px){.mcol{flex-basis:105px}.mcol img{height:210px}
+    @keyframes floaty{0%,100%{transform:translateX(40px) translateY(0)}50%{transform:translateX(40px) translateY(-14px)}}
+    .mcol img{transform:translateX(40px)}}
+  #scr-welcome .mcol{align-self:flex-end}
+  #scr-welcome .mcol img{margin-right:38px}
+
+  /* ---------- level badge ---------- */
+  .lvl-card{background:var(--card); border:2px solid var(--border); border-radius:22px;
+    padding:30px 44px; text-align:center; max-width:560px; width:92%;
+    box-shadow:0 8px 30px rgba(51,56,77,.08)}
+  .lvl-card h1{color:var(--teal); font-size:35px; margin-top:14px}
+  .badgeimg{width:170px; animation:badgepop .5s cubic-bezier(.34,1.56,.64,1);
+    filter:drop-shadow(0 8px 14px rgba(51,56,77,.22))}
+  @keyframes badgepop{from{transform:scale(.3) rotate(-15deg); opacity:0} to{transform:scale(1) rotate(0); opacity:1}}
+  .badge-row{display:flex; gap:10px; justify-content:center; margin:14px 0 4px}
+  .badge-slot{width:34px; height:34px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .badge-slot img{width:100%; height:100%; object-fit:contain}
+
+  footer{position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    font-size:16px; color:var(--ink-soft); z-index:1; white-space:nowrap}
+  .btn-ghost{background:none; border:none; color:var(--ink-soft); font-weight:700;
+    font-size:17px; margin-top:12px; cursor:pointer; text-decoration:underline; font-family:inherit}
+  /* anti-copia: nada seleccionable salvo los campos de entrada */
+  *{user-select:none; -webkit-user-select:none}
+  input{user-select:text; -webkit-user-select:text}
+</style>
+</head>
+<body>
+
+<!-- ============ WELCOME ============ -->
+<div id="scr-welcome" class="screen on">
+  <div class="welcome-wrap">
+    <div class="mcol"><img id="mascot" src="assets/p_saluda_anim.webp" alt=""></div>
+    <div class="welcome-left">
+      <img class="logo-img" src="assets/logo.png" alt="El Impostor">
+      <p>En cada ronda hay cuatro tarjetas y un impostor escondido. ¿Te animás a encontrarlo?</p>
+    </div>
+    <div class="panel">
+      <h2>¿Quién investiga hoy?</h2>
+      <div class="row2">
+        <div><label>Nombre</label><input id="in-nombre" type="text" autocomplete="off"></div>
+        <div><label>Apellido</label><input id="in-apellido" type="text" autocomplete="off"></div>
+      </div>
+      <label>Sección</label>
+      <div class="sec-btns" id="sec-btns">
+        <button data-sec="1° A">1° A</button>
+        <button data-sec="1° B">1° B</button>
+      </div>
+      <div id="code-area">
+        <label>Código de progreso</label>
+        <input id="in-codigo" type="text" placeholder="XXXXX-XXXXX-…" autocomplete="off" style="font-family:monospace">
+      </div>
+      <div class="err" id="err-welcome"></div>
+      <button class="cta" id="btn-start">Empezar</button>
+      <button class="code-link" id="code-link" type="button">¿Jugaste en otra compu? Ingresá tu código</button>
+    </div>
+    <div class="rank-panel" id="rank-panel">
+      <h3>Mejores jugadores</h3>
+      <div id="rank-list"></div>
+      <div class="rank-legend">Terminá los 4 encuentros para entrar al ranking</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RULES ============ -->
+<div id="scr-rules" class="screen">
+  <div class="mcol"></div>
+  <div class="rules">
+    <h1>Cómo se juega</h1>
+    <ul>
+      <li><span class="num">1</span>En cada sesión vas a ver una <b>consigna</b> y <b>4 tarjetas</b>.</li>
+      <li><span class="num">2</span>Tres tarjetas cumplen la consigna. Una <b>no</b>: esa es <b style="color:var(--coral)">el impostor</b>.</li>
+      <li><span class="num">3</span>Tocá la tarjeta que creas que es el impostor y te cuento por qué.</li>
+      <li><span class="num">4</span>El juego se juega en <b>4 encuentros</b>, cada uno con 2 niveles. Tu progreso <b>queda guardado en esta compu</b>: cuando vuelvas con tu nombre y sección, seguís donde quedaste.</li>
+      <li><span class="num">5</span>Tenés <b>45 segundos</b> por consigna. Si te equivocás o se acaba el tiempo, <b>el nivel vuelve a empezar</b>.</li>
+    </ul>
+    <div class="example">
+      <div>Perro</div><div>Gato</div><div>Caballo</div><div class="bad">Araña ✗</div>
+    </div>
+    <p style="color:var(--ink-soft); font-size:15px">Ejemplo: si la consigna es “animal con columna vertebral”, la araña es el impostor: tiene patas pero no columna.</p>
+    <button class="cta" id="btn-rules">¡Entendido!</button>
+  </div>
+</div>
+
+<!-- ============ PLAY ============ -->
+<div id="scr-play" class="screen">
+  <div class="mcol play-mascot"></div>
+  <div class="play-top">
+    <div class="who" id="who"></div>
+    <div class="play-top-right">
+      <div class="sesion-txt" id="sesion-txt"></div>
+      <div class="levelpill" id="levelpill"></div>
+      <div class="ring" id="ring">
+        <svg viewBox="0 0 64 64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle class="ring-fg" id="ring-fg" cx="32" cy="32" r="28"/></svg>
+        <span class="ring-num" id="ring-num">45</span>
+      </div>
+    </div>
+  </div>
+  <div class="play-mid">
+    <div class="consigna-tag" id="consigna-tag">Consigna</div>
+    <div class="consigna"><span id="consigna"></span></div>
+    <div class="cards" id="cards"></div>
+  </div>
+</div>
+
+<!-- ============ LEVEL COMPLETE ============ -->
+<div id="scr-level" class="screen">
+  <div class="mcol"></div>
+  <div class="lvl-card">
+    <img class="badgeimg" id="lvl-badge" src="assets/badges/b1.png" alt="insignia">
+    <h1 id="lvl-title"></h1>
+    <div class="score-line" id="lvl-score"></div>
+    <div class="badge-row" id="lvl-insignias"></div>
+    <button class="cta" id="btn-level-next">Jugar</button>
+  </div>
+</div>
+
+<!-- feedback overlay -->
+<div class="overlay" id="feedback-ov">
+  <div class="feedback-card" id="fb-card">
+    <div class="head" id="fb-head"></div>
+    <div id="fb-text"></div>
+    <button class="next" id="btn-next">Siguiente</button>
+  </div>
+</div>
+
+<!-- countdown overlay -->
+<div class="count-overlay" id="count-ov"><div class="count-num" id="count-num"></div></div>
+
+<!-- confetti -->
+<canvas id="confetti"></canvas>
+
+<!-- ============ ENCOUNTER END ============ -->
+<div id="scr-done" class="screen">
+  <div class="mcol"></div>
+  <div class="done-card">
+    <img class="logo-img" src="assets/logo.png" alt="El Impostor">
+    <h1 id="done-title"></h1>
+    <div class="stars" id="done-stars"></div>
+    <div class="score-line" id="done-score"></div>
+    <div class="saved-line"><span class="tick">✓</span> Tu progreso quedó guardado en esta compu</div>
+    <div class="code-note" id="code-note">Anotá este código por si cambiás de compu:</div>
+    <div class="codebox" id="done-code"></div>
+    <button class="cta" id="btn-continue">Continuar</button>
+    <button class="btn-ghost" id="btn-exit">Terminar por hoy</button>
+    <button class="btn-ghost" id="btn-rank" type="button">Ver mejores jugadores</button>
+  </div>
+</div>
+
+<!-- ranking overlay -->
+<div class="overlay" id="rank-ov" style="align-items:center">
+  <div class="feedback-card" style="max-width:480px">
+    <div class="rank-panel" style="border:none; box-shadow:none; padding:0; width:100%">
+      <h3>Mejores jugadores</h3>
+      <div id="rank-list-ov"></div>
+    </div>
+    <button class="next" id="btn-rank-close" style="margin-top:14px">Cerrar</button>
+  </div>
+</div>
+
+
+<footer>Juego diseñado por <b>Patricia Inés Castro</b> · Desarrollado por Devin (Cognition AI)</footer>
+
+<script src="data.js"></script>
+<script>
+/* ================= CONFIG ================= */
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycby9rTvyPcAczXz0GuQCcD8yqiRnVBWcbQXioMm0_G_yPm9qTBlWQNzFcwujsOppRRR1/exec";
+const ENCOUNTERS = [[1,2],[3,4],[5,6],[7,8]];
+const PLAY = {1:3,2:4,3:4,4:5,5:5,6:5,7:5,8:5};
+const LEVEL_LABEL = {1:"Nivel 1",2:"Nivel 2",3:"Nivel 3",4:"Nivel 4",5:"Nivel 5",6:"Nivel 6",7:"Nivel 7",8:"Nivel 8 — Jefe final"};
+const SESSIONS = GAME_DATA.sessions;
+const BY_ID = Object.fromEntries(SESSIONS.map(s=>[s.id,s]));
+
+/* ================= STATE ================= */
+let st = null;
+const save = () => localStorage.setItem('impostor_save', JSON.stringify(st));
+
+/* ================= CODEC ================= */
+const B32 = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 32 chars, sin I ni O
+const RES_N = SESSIONS.length; // sesiones codificadas en el código de respaldo
+function encodeCode(){
+  const bits = [];
+  for(let i=1;i<=RES_N;i++){ const v=(st.res[i]||0); bits.push(v>>1&1, v&1); }
+  bits.push(st.encuentro>>2&1, st.encuentro>>1&1, st.encuentro&1);
+  while(bits.length%5) bits.push(0);
+  let s="";
+  for(let i=0;i<bits.length;i+=5)
+    s += B32[(bits[i]<<4)|(bits[i+1]<<3)|(bits[i+2]<<2)|(bits[i+3]<<1)|bits[i+4]];
+  let c=0; for(let i=0;i<s.length;i++) c=(c*31+s.charCodeAt(i))%32;
+  s += B32[c];
+  return s.replace(/(.{5})/g,'$1-').replace(/-$/,'');
+}
+function decodeCode(code){
+  const s = code.replace(/-/g,'').toUpperCase();
+  if(s.length<10) return null;
+  let c=0; for(let i=0;i<s.length-1;i++) c=(c*31+s.charCodeAt(i))%32;
+  if(B32[c]!==s[s.length-1]) return null;
+  const bits=[];
+  for(const ch of s.slice(0,-1)){
+    const v=B32.indexOf(ch); if(v<0) return null;
+    for(let b=4;b>=0;b--) bits.push(v>>b&1);
+  }
+  // códigos viejos codificaban 92 sesiones; los nuevos usan el banco completo
+  const resN = (s.length-1)*5 >= 187+3+5 ? RES_N : 92;
+  const res={};
+  for(let i=1;i<=resN;i++) res[i]=(bits[(i-1)*2]<<1)|bits[(i-1)*2+1];
+  const encuentro=(bits[resN*2]<<2)|(bits[resN*2+1]<<1)|bits[resN*2+2];
+  return {res, encuentro: encuentro+1};
+}
+
+/* ================= LOGGING ================= */
+function enqueueLog(row){
+  try{
+    const q=JSON.parse(localStorage.getItem('impostor_logq')||'[]');
+    q.push(row);
+    localStorage.setItem('impostor_logq',JSON.stringify(q));
+  }catch(e){}
+  flushLogs();
+}
+function logSession(sessId, resultado, isRepaso){
+  enqueueLog({fecha:new Date().toISOString(), curso:st.seccion,
+    nombre:st.nombre, apellido:st.apellido, encuentro:st.encuentro,
+    nivel:BY_ID[sessId].level, sesion:sessId, resultado: resultado,
+    intento: isRepaso? "" : (st.levelIntento||1), tipo: isRepaso? "repaso":"nivel"});
+}
+function logFinal(aciertos){
+  enqueueLog({fecha:new Date().toISOString(), curso:st.seccion,
+    nombre:st.nombre, apellido:st.apellido, encuentro:4,
+    nivel:8, sesion:0, resultado:"completo",
+    intento:"", tipo:"final", aciertos:aciertos});
+}
+
+/* ---------- ranking de mejores jugadores ---------- */
+let RANK=null;
+function loadRanking(){
+  if(!SHEETS_URL) { renderRankList(); return; }
+  fetch(SHEETS_URL).then(r=>r.json()).then(d=>{ RANK=d&&d.ranking||[]; renderRankList(); })
+    .catch(()=>{ RANK=[]; renderRankList(); });
+}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rankRow(p, i){
+  if(!p) return '<div class="rank-row"><span class="rank-num" style="background:var(--border)">'+(i+1)+'</span><span class="rank-empty">Todavía nadie</span></div>';
+  return '<div class="rank-row"><span class="rank-num">'+(i+1)+'</span>'+
+    '<span class="rank-name">'+esc(p.nombre)+' '+esc(p.apellido)+
+    '<span class="rank-meta">'+Number(p.completadas||0)+' partida'+(p.completadas>1?'s':'')+' completada'+(p.completadas>1?'s':'')+' · '+Number(p.aciertos||0)+' aciertos</span></span></div>';
+}
+function rankHTML(){
+  if(RANK===null) return '<div class="rank-empty" style="text-align:center;padding:10px">Cargando…</div>';
+  let out='';
+  ['1° A','1° B'].forEach(sec=>{
+    const top=(RANK||[]).filter(p=>p.curso===sec)
+      .sort((a,b)=> b.completadas-a.completadas || b.aciertos-a.aciertos).slice(0,3);
+    out+='<div class="rank-sec">'+sec+'</div>';
+    for(let i=0;i<3;i++) out+=rankRow(top[i],i);
+  });
+  return out;
+}
+function renderRankList(){
+  const a=$('rank-list'), b=$('rank-list-ov');
+  const h=rankHTML(); if(a) a.innerHTML=h; if(b) b.innerHTML=h;
+}
+let _logSending=false;
+function flushLogs(){
+  if(!SHEETS_URL||_logSending) return;
+  let q;
+  try{ q=JSON.parse(localStorage.getItem('impostor_logq')||'[]'); }catch(e){ return; }
+  if(!q.length) return;
+  _logSending=true;
+  const row=q[0];
+  fetch(SHEETS_URL,{method:'POST',mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},body:JSON.stringify(row)})
+    .then(()=>{
+      _logSending=false;
+      try{ const q2=JSON.parse(localStorage.getItem('impostor_logq')||'[]');
+        q2.shift(); localStorage.setItem('impostor_logq',JSON.stringify(q2)); }catch(e){}
+      flushLogs();
+    })
+    .catch(()=>{ _logSending=false; });
+}
+flushLogs();
+
+/* ================= UI HELPERS ================= */
+loadRanking();
+const $ = id => document.getElementById(id);
+const POSES = {saluda:'assets/p_saluda_anim.webp', piensa:'assets/p_piensa.png',
+               festeja:'assets/p_festeja.png', anima:'assets/p_anima.png', explica:'assets/p_explica.png'};
+const BADGE_COLORS = ['#00A8A8','#8C6FE8','#FF7B6B','#4CC9A0','#00A8A8','#8C6FE8','#FF7B6B','#4CC9A0'];
+const mascotEl = () => $('mascot');
+const setMascot = p => { $('mascot').src = POSES[p]; };
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  $(id).classList.add('on');
+  const mc=$(id).querySelector('.mcol');
+  if(mc) mc.appendChild($('mascot'));
+}
+
+/* ---------- confetti ---------- */
+const cv = $('confetti'), ctx = cv.getContext('2d');
+let confParts = [], confAnim = null;
+function confettiBurst(seconds=3){
+  cv.width = innerWidth; cv.height = innerHeight;
+  const colors = ['#00A8A8','#FFC94D','#FF7B6B','#8C6FE8','#4CC9A0'];
+  for(let i=0;i<160;i++){
+    confParts.push({
+      x: Math.random()*cv.width, y: -20-Math.random()*cv.height*0.4,
+      w: 6+Math.random()*8, h: 8+Math.random()*10,
+      vy: 2+Math.random()*3.5, vx: -1.5+Math.random()*3,
+      rot: Math.random()*Math.PI, vr: -0.15+Math.random()*0.3,
+      color: colors[i%colors.length]
+    });
+  }
+  if(!confAnim) confLoop();
+  setTimeout(()=>{ confParts = confParts.slice(0,0); }, seconds*1000+2500);
+}
+function confLoop(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  confParts.forEach(p=>{
+    p.y+=p.vy; p.x+=p.vx+Math.sin(p.y/40); p.rot+=p.vr;
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+    ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    ctx.restore();
+  });
+  confParts = confParts.filter(p=>p.y<cv.height+30);
+  if(confParts.length){ confAnim=requestAnimationFrame(confLoop); }
+  else { confAnim=null; ctx.clearRect(0,0,cv.width,cv.height); }
+}
+
+/* ---------- countdown ---------- */
+function countdown(cb){
+  const ov=$('count-ov'), n=$('count-num');
+  const seq=[['3',false],['2',false],['1',false],['¡JUGAMOS!',true]];
+  let i=0;
+  ov.classList.add('on');
+  (function step(){
+    if(i>=seq.length){ ov.classList.remove('on'); cb(); return; }
+    n.textContent=seq[i][0];
+    n.className='count-num'+(seq[i][1]?' go':'');
+    void n.offsetWidth; n.style.animation='none'; void n.offsetWidth; n.style.animation='';
+    i++; setTimeout(step, i===seq.length?900:750);
+  })();
+}
+
+/* ================= FLOW ================= */
+let seccion=null;
+document.querySelectorAll('#sec-btns button').forEach(b=>b.onclick=()=>{
+  seccion=b.dataset.sec;
+  document.querySelectorAll('#sec-btns button').forEach(x=>x.classList.toggle('sel',x===b));
+});
+
+// si hay partida guardada en esta compu, precargar los datos del jugador
+try{
+  const _sv=JSON.parse(localStorage.getItem('impostor_save')||'null');
+  if(_sv){
+    $('in-nombre').value=_sv.nombre||'';
+    $('in-apellido').value=_sv.apellido||'';
+    if(_sv.seccion){
+      seccion=_sv.seccion;
+      document.querySelectorAll('#sec-btns button').forEach(x=>x.classList.toggle('sel',x.dataset.sec===seccion));
+    }
+  }
+}catch(e){}
+
+function normName(v){
+  return v.trim().replace(/\s+/g,' ').split(' ')
+    .map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+}
+$('code-link').onclick = () => { $('code-area').classList.add('open'); $('code-link').style.display='none'; };
+$('btn-start').onclick = () => {
+  const nombre=normName($('in-nombre').value), apellido=normName($('in-apellido').value);
+  const code=$('in-codigo').value.trim();
+  $('in-nombre').value=nombre; $('in-apellido').value=apellido;
+  $('in-nombre').classList.toggle('missing',!nombre);
+  $('in-apellido').classList.toggle('missing',!apellido);
+  $('sec-btns').classList.toggle('missing',!seccion);
+  if(!nombre||!apellido||!seccion){ $('err-welcome').textContent="Completá nombre, apellido y sección."; return; }
+  st = {nombre, apellido, seccion, encuentro:1, res:{}, results:[], repaso:false};
+  if(code){
+    const d=decodeCode(code);
+    if(!d){ $('err-welcome').textContent="Ese código no parece válido. Revisalo o empezá de cero."; return; }
+    if(d.encuentro>4){ $('err-welcome').textContent="Ese código ya completó los 4 encuentros."; return; }
+    st.res=d.res; st.encuentro=d.encuentro;
+  } else {
+    const old=localStorage.getItem('impostor_save');
+    if(old){ try{const o=JSON.parse(old);
+      if(normName(o.nombre||'')===nombre&&normName(o.apellido||'')===apellido&&o.seccion===seccion) {st=o; st.nombre=nombre; st.apellido=apellido;} }catch(e){} }
+  }
+  save();
+  if(st.encuentro>4){ showFinal(); return; }
+  setMascot('explica'); show('scr-rules');
+};
+
+let rulesGo=false;
+$('btn-rules').onclick = () => {
+  if(rulesGo) return;
+  rulesGo=true;
+  countdown(()=>{setMascot('piensa'); startEncounter();});
+};
+
+function poolOf(level){ return SESSIONS.filter(s=>s.level===level); }
+
+function startEncounter(){
+  if(!st.inEncounter){
+    st.results=[]; st.levelResults=[];
+    st.repasoQueue=[]; st.playing=null;
+    if(st.encuentro>1){
+      const failed=Object.keys(st.res).filter(id=>st.res[id]===2).map(Number);
+      if(failed.length) st.repasoQueue=[failed[Math.floor(Math.random()*failed.length)]];
+    }
+    st.levelIdx=0; st.levelQueue=null;
+  }
+  st.inEncounter=true; save();
+  nextStep();
+}
+
+function nextStep(){
+  if(st.playing){ playSession(st.playing, st.playingRepaso); return; }
+  if(st.repasoQueue.length){ playSession(st.repasoQueue.shift(), true); return; }
+  if(st.encuentro>4){ showFinal(); return; }
+  const levels=ENCOUNTERS[st.encuentro-1];
+  if(st.levelIdx>=levels.length){ endEncounter(); return; }
+  if(!st.levelQueue){
+    const lv=levels[st.levelIdx];
+    const avail=poolOf(lv).filter(s=>(st.res[s.id]||0)===0).map(s=>s.id);
+    for(let i=avail.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[avail[i],avail[j]]=[avail[j],avail[i]];}
+    st.levelQueue=avail.slice(0,PLAY[lv]); st.levelId=lv;
+    st.levelTotal=st.levelQueue.length; st.levelResults=[]; st.levelErrors=0;
+    st.levelRestarts=0; st.levelIntento=1;
+  }
+  if(!st.levelQueue){ st.levelQueue=null; }
+  if(!st.levelQueue.length){ st.levelQueue=null; levelComplete(levels[st.levelIdx]); st.levelIdx++; save(); return; }
+  playSession(st.levelQueue.shift(), false);
+}
+
+function levelComplete(lv, exhausted){
+  const res=st.levelResults, ok=res.filter(r=>r.ok).length;
+  $('lvl-badge').src='assets/badges/b'+lv+'.png';
+  $('lvl-title').textContent= exhausted? 'Nivel '+lv+' completado' : '¡Nivel '+lv+' conquistado!';
+  const errs=st.levelErrors||0;
+  $('lvl-score').textContent = exhausted
+    ? 'Agotaste las sesiones de este nivel. Las que te costaron vuelven en el repaso.'
+    : (errs===0
+      ? '¡Perfecto: '+ok+' de '+res.length+' sin errores!'
+      : 'Lo lograste después de '+(st.levelRestarts||0)+(st.levelRestarts===1?' reinicio.':' reinicios.'));
+  const ins=$('lvl-insignias'); ins.innerHTML='';
+  for(let i=1;i<=8;i++){ const d=document.createElement('div');
+    d.className='badge-slot';
+    if(i<=lv) d.innerHTML='<img src="assets/badges/b'+i+'.png">';
+    ins.appendChild(d); }
+  const nextLevels=ENCOUNTERS[st.encuentro-1];
+  const ni=nextLevels.indexOf(lv)+1;
+  $('btn-level-next').textContent = ni<nextLevels.length? 'Jugar nivel '+nextLevels[ni] : 'Terminar encuentro';
+  setMascot('festeja'); confettiBurst(2); show('scr-level');
+}
+
+$('btn-level-next').onclick=()=>{ save(); nextStep(); };
+
+let curSession=null, curIsRepaso=false, lastWasWrong=false;
+function playSession(id, isRepaso){
+  curSession=BY_ID[id]; curIsRepaso=isRepaso; lastWasWrong=false;
+  st.playing=id; st.playingRepaso=isRepaso;
+  if(!st.timerDeadline) st.timerDeadline=Date.now()+T_SECONDS*1000;  // reanudar con el tiempo que quedaba
+  save();
+  $('who').innerHTML = "<b>"+st.nombre+" "+st.apellido+"</b> · "+st.seccion+(isRepaso?" · Repaso":"");
+  $('levelpill').textContent = isRepaso? "Repaso" : LEVEL_LABEL[st.levelId];
+  $('levelpill').classList.toggle('boss', !isRepaso && st.levelId===8);
+  $('consigna').textContent = curSession.consigna;
+  $('consigna-tag').textContent = isRepaso ? "Repasamos una difícil" : "Encontrá al impostor";
+  setMascot('piensa');
+  renderProgress();
+  const order=[0,1,2,3]; for(let i=3;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  const box=$('cards'); box.innerHTML='';
+  order.forEach(idx=>{
+    const name=curSession.cards[idx], slug=curSession.card_slugs[idx];
+    const d=document.createElement('div'); d.className='tcard';
+    d.innerHTML='<img src="assets/cards/'+slug+'.png?v=13" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
+                '<span class="lbl">'+name+'</span>';
+    d.onclick=()=>answer(idx,d);
+    box.appendChild(d);
+  });
+  $('feedback-ov').classList.remove('on');
+  show('scr-play');
+  placeMascot();
+  startTimer();
+}
+
+/* ---------- temporizador circular (45 s por consigna) ---------- */
+const T_SECONDS=45, RING_C=176;
+let timerRAF=null;
+function startTimer(){
+  stopTimer();
+  const fg=$('ring-fg'), num=$('ring-num'), ring=$('ring');
+  const T=T_SECONDS*1000;
+  ring.classList.remove('warn','crit');
+  function step(){
+    const left=(st&&st.timerDeadline)? st.timerDeadline-Date.now() : T;
+    const sec=Math.max(0,Math.ceil(left/1000));
+    fg.style.strokeDashoffset=RING_C*(1-Math.max(0,Math.min(1,left/T)));
+    num.textContent=sec;
+    ring.classList.toggle('warn', sec<=15 && sec>5);
+    ring.classList.toggle('crit', sec<=5);
+    if(left<=0){ timeUp(); return; }
+    timerRAF=requestAnimationFrame(step);
+  }
+  step();
+}
+function stopTimer(){ if(timerRAF){ cancelAnimationFrame(timerRAF); timerRAF=null; } }
+function timeUp(){ answer(-1, null, true); }
+
+function renderProgress(){
+  const el=$('sesion-txt');
+  el.textContent = curIsRepaso? 'Repaso'
+    : 'Sesión '+((st.levelResults||[]).length+1)+' de '+(st.levelTotal||'');
+  el.classList.toggle('boss', !curIsRepaso && st.levelId===8);
+}
+
+function placeMascot(){
+  const m=document.querySelector('#scr-play .play-mascot'), img=m&&m.querySelector('img');
+  if(!img) return;
+  const r=$('cards').getBoundingClientRect();
+  const ar=(img.naturalWidth&&img.naturalHeight)? img.naturalWidth/img.naturalHeight : 0.72;
+  const maxH=r.bottom-70-12;                 // del borde inferior de la barra al de la grilla
+  const maxW=r.left-16;                      // espacio libre a la izquierda de la grilla
+  let h=Math.min(300, maxH, maxW/ar);
+  img.style.height=Math.max(70,h)+'px';
+  m.style.bottom=Math.max(24,(window.innerHeight-r.bottom))+'px';
+  m.style.left=Math.max(0,(r.left-h*ar)/2)+'px';
+}
+window.addEventListener('resize',()=>{ if($('scr-play').classList.contains('on')) placeMascot(); });
+
+function answer(idx, el, timedOut){
+  if(el && el.classList.contains('disabled')) return;
+  if(document.querySelector('.tcard.disabled')) return;
+  stopTimer();
+  document.querySelectorAll('.tcard').forEach(t=>t.classList.add('disabled'));
+  const ok = idx===curSession.impostor;
+  document.querySelectorAll('.tcard').forEach(t=>{
+    if(t.querySelector('.lbl').textContent===curSession.impostor_name) t.classList.add('was-imp');
+    else t.classList.add('was-ok');
+  });
+  if(el) el.classList.add('picked');
+  st.res[curSession.id]= ok?1:2;
+  st.results.push({id:curSession.id, ok, repaso:curIsRepaso});
+  st.playing=null; st.timerDeadline=null;
+  if(!curIsRepaso){ st.levelResults.push({ok}); if(!ok) st.levelErrors=(st.levelErrors||0)+1; }
+  logSession(curSession.id, timedOut? "tiempo" : (ok? "bien":"mal"), curIsRepaso);
+  lastWasWrong=!ok;
+  save();
+  const fb=$('fb-card');
+  fb.className='feedback-card '+(ok?'win':'lose');
+  $('fb-head').textContent = ok? "¡Correcto! "+curSession.impostor_name+" era el impostor"
+                              : (timedOut? "¡Se terminó el tiempo! El impostor era "+curSession.impostor_name
+                                         : "Esta vez no — el impostor era "+curSession.impostor_name);
+  $('fb-text').textContent = curSession.why;
+  $('btn-next').textContent = ok? "Siguiente" : (curIsRepaso? "Seguir" : "Volver a empezar el nivel");
+  setMascot(ok?'festeja':'anima');
+  $('feedback-ov').classList.add('on');
+}
+
+function restartLevel(){
+  st.levelResults=[];
+  const lv=st.levelId;
+  st.levelRestarts=(st.levelRestarts||0)+1;
+  st.levelIntento=(st.levelIntento||1)+1;
+  // la tanda nueva se arma SOLO con sesiones no vistas del nivel
+  const avail=poolOf(lv).filter(s=>(st.res[s.id]||0)===0).map(s=>s.id);
+  for(let i=avail.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[avail[i],avail[j]]=[avail[j],avail[i]];}
+  st.levelQueue=avail.slice(0,PLAY[lv]);
+  st.levelTotal=st.levelQueue.length;
+  if(!st.levelQueue.length){ // no quedan sesiones no vistas: cerrar el nivel
+    st.levelQueue=null; st.levelIdx++;
+    levelComplete(lv,true); save(); return;
+  }
+  save(); nextStep();
+}
+
+$('btn-next').onclick = ()=>{
+  $('feedback-ov').classList.remove('on');
+  if(lastWasWrong){ if(!curIsRepaso) restartLevel(); else nextStep(); }
+  else nextStep();
+};
+
+function endEncounter(){
+  const byId={}; st.results.filter(r=>!r.repaso).forEach(r=>{byId[r.id]=r.ok;});
+  const jugadas=Object.values(byId), ok=jugadas.filter(Boolean).length;
+  $('done-title').textContent="¡Encuentro "+st.encuentro+" completo!";
+  const nstars=Math.max(1,Math.round(ok/Math.max(1,jugadas.length)*5));
+  $('done-stars').innerHTML='<span style="color:var(--yellow)">'+'★'.repeat(nstars)+'</span>'+
+    '<span style="color:var(--border)">'+'★'.repeat(5-nstars)+'</span>';
+  $('done-score').textContent="Resolviste bien "+ok+" de "+jugadas.length+" sesiones.";
+  $('done-code').textContent=encodeCode();
+  st.inEncounter=false; st.playing=null;
+  st.encuentro++;
+  save();
+  if(st.encuentro===5){              // cerró el encuentro 4 (st.encuentro ya se incrementó)
+    const total=Object.values(st.res).filter(v=>v===1).length;
+    logFinal(total);                 // suma al ranking con los aciertos de toda la partida
+  }
+  $('btn-continue').textContent = st.encuentro>4? "Ver resultado final" : "Seguir jugando";
+  $('btn-exit').textContent = 'Terminar por hoy';
+  $('btn-exit').style.display = st.encuentro>4? 'none' : 'block';
+  setMascot('festeja'); confettiBurst(3.5);
+  show('scr-done');
+}
+
+
+function showFinal(){
+  $('done-title').textContent="¡Terminaste El Impostor!";
+  $('done-stars').innerHTML='<span style="color:var(--yellow); font-size:56px">★</span>';
+  $('done-score').textContent="Completaste los 4 encuentros. ¡Felicitaciones, "+st.nombre+"!";
+  document.querySelector('.saved-line').style.display='none';
+  $('done-code').style.display='none';
+  $('code-note').style.display='none';
+  $('btn-continue').textContent="Volver al inicio";
+  $('btn-exit').style.display='none';
+  setMascot('festeja'); confettiBurst(5);
+  $('btn-continue').onclick=()=>location.reload();
+  show('scr-done');
+}
+
+$('btn-continue').onclick=()=>{
+  if(st.encuentro>4){ showFinal(); return; }
+  setMascot('piensa'); startEncounter();   // sigue al encuentro siguiente sin volver al inicio
+};
+$('btn-exit').onclick=()=>location.reload();
+$('btn-rank').onclick=()=>{ renderRankList(); $('rank-ov').classList.add('on'); };
+$('btn-rank-close').onclick=()=>$('rank-ov').classList.remove('on');
+
+/* anti-copia: bloquear selección, menú contextual y copiar fuera de los inputs */
+function blockOutsideInput(e){ const t=e.target;
+  if(!(t && t.closest && t.closest('input'))) e.preventDefault(); }
+document.addEventListener('contextmenu',blockOutsideInput);
+document.addEventListener('copy',blockOutsideInput);
+document.addEventListener('selectstart',blockOutsideInput);
+</script>
+</body>
+</html>

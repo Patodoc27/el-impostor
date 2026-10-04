@@ -791,6 +791,28 @@ function placeMascot(){
 }
 window.addEventListener('resize',()=>{ if($('scr-play').classList.contains('on')) placeMascot(); });
 
+let AC=null;
+function sfx(kind){
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const t0=AC.currentTime+0.02;
+    const notes = kind==='win' ? [[523.25,0,0.16],[659.25,0.09,0.16],[783.99,0.18,0.24]]
+                               : [[220,0,0.18],[164.81,0.13,0.26]];
+    notes.forEach(function(n){
+      const o=AC.createOscillator(), g=AC.createGain();
+      o.type = kind==='win'?'triangle':'sine';
+      o.frequency.value=n[0];
+      const at=t0+n[1], dur=n[2];
+      g.gain.setValueAtTime(0.0001,at);
+      g.gain.exponentialRampToValueAtTime(0.16,at+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,at+dur);
+      o.connect(g); g.connect(AC.destination);
+      o.start(at); o.stop(at+dur+0.05);
+    });
+  }catch(e){}
+}
+
 function answer(idx, el, timedOut){
   if(el && el.classList.contains('disabled')) return;
   if(document.querySelector('.tcard.disabled')) return;
@@ -808,6 +830,7 @@ function answer(idx, el, timedOut){
   if(!curIsRepaso){ st.levelResults.push({ok}); if(!ok) st.levelErrors=(st.levelErrors||0)+1; }
   logSession(curSession.id, timedOut? "tiempo" : (ok? "bien":"mal"), curIsRepaso);
   lastWasWrong=!ok;
+  sfx(ok?'win':'lose');
   save();
   const fb=$('fb-card');
   fb.className='feedback-card '+(ok?'win':'lose');

@@ -822,7 +822,7 @@ function toggleMute(){
 }
 function sessionVoiceSeq(){
   if(!curSession) return [];
-  return ['assets/audio/'+(curIsRepaso?'r':'s')+curSession.id+'.mp3']
+  return ['assets/audio/'+(curIsRepaso?'intro_r':'intro')+'.mp3','assets/audio/s'+curSession.id+'.mp3']
     .concat(curOrder.map(i=>'assets/audio/c_'+curSession.card_slugs[i]+'.mp3'));
 }
 

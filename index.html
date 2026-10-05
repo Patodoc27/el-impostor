@@ -736,7 +736,7 @@ function playSession(id, isRepaso){
   order.forEach(idx=>{
     const name=curSession.cards[idx], slug=curSession.card_slugs[idx];
     const d=document.createElement('div'); d.className='tcard';
-    d.innerHTML='<img src="assets/cards/'+slug+'.png?v=13" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
+    d.innerHTML='<img src="assets/cards/'+slug+'.png?v=14" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
                 '<span class="lbl">'+name+'</span>';
     d.onclick=()=>answer(idx,d);
     box.appendChild(d);

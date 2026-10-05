@@ -808,7 +808,7 @@ function stopVoice(){ sndQ=[]; if(curAudio){ try{curAudio.pause();}catch(e){} cu
 function playNext(){
   if(muted||!sndQ.length) return;
   const f=sndQ.shift();
-  curAudio=new Audio(f+'?v=1');
+  curAudio=new Audio(f+'?v=2');
   curAudio.onended=playNext; curAudio.onerror=playNext;
   curAudio.play().catch(function(){ sndQ=[]; });
 }

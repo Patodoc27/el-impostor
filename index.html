@@ -248,6 +248,10 @@
     letter-spacing:2px; padding:12px 16px; border-radius:14px;
     word-break:break-all; user-select:all; display:block; max-width:560px}
   .code-note{font-size:15px; color:var(--ink-soft); margin:12px 0 4px}
+  .btn-copy{margin:0 auto 4px; display:inline-block; background:var(--card);
+    border:2px solid var(--teal); color:var(--teal); font-weight:700; font-size:15px;
+    padding:6px 18px; border-radius:999px; cursor:pointer; font-family:inherit}
+  .btn-copy:active{transform:scale(.96)}
   .saved-line{display:flex; align-items:center; justify-content:center; gap:8px;
     margin:14px 0 2px; font-size:17px; color:#1E8F6E; font-weight:600}
   .saved-line .tick{display:inline-block; width:22px; height:22px; line-height:22px;
@@ -411,6 +415,7 @@
     <div class="saved-line"><span class="tick">✓</span> Tu progreso quedó guardado en esta compu</div>
     <div class="code-note" id="code-note">Anotá este código por si cambiás de compu:</div>
     <div class="codebox" id="done-code"></div>
+    <button class="btn-copy" id="btn-copy" type="button">Copiar código</button>
     <button class="cta" id="btn-continue">Continuar</button>
     <button class="btn-ghost" id="btn-exit">Terminar por hoy</button>
     <button class="btn-ghost" id="btn-rank" type="button">Ver mejores jugadores</button>
@@ -934,6 +939,7 @@ function showFinal(){
   document.querySelector('.saved-line').style.display='none';
   $('done-code').style.display='none';
   $('code-note').style.display='none';
+  $('btn-copy').style.display='none';
   $('btn-continue').textContent="Volver al inicio";
   $('btn-exit').style.display='none';
   setMascot('festeja'); confettiBurst(5);
@@ -951,10 +957,21 @@ $('btn-rank-close').onclick=()=>$('rank-ov').classList.remove('on');
 $('btn-snd').innerHTML=muted?SPK_OFF:SPK;
 $('btn-snd').classList.toggle('off',muted);
 $('btn-snd').onclick=toggleMute;
+$('btn-copy').onclick=function(){
+  const code=$('done-code').textContent, b=this;
+  const done=()=>{ b.textContent='¡Copiado!'; setTimeout(()=>b.textContent='Copiar código',1800); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(done).catch(()=>{ fallbackCopy(code); done(); });
+  } else { fallbackCopy(code); done(); }
+};
+function fallbackCopy(t){
+  const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove();
+}
 
 /* anti-copia: bloquear selección, menú contextual y copiar fuera de los inputs */
 function blockOutsideInput(e){ const t=e.target;
-  if(!(t && t.closest && t.closest('input'))) e.preventDefault(); }
+  if(!(t && t.closest && t.closest('input, .codebox'))) e.preventDefault(); }
 document.addEventListener('contextmenu',blockOutsideInput);
 document.addEventListener('copy',blockOutsideInput);
 document.addEventListener('selectstart',blockOutsideInput);

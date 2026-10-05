@@ -156,19 +156,12 @@
 
   .play-mid{flex:1; width:100%; min-height:0; display:flex; flex-direction:column;
     align-items:center; padding:0 20px}
-  .tag-row{display:flex; align-items:center; justify-content:center; gap:12px}
   .consigna-tag{font-size:23px; font-weight:700; letter-spacing:1.5px; color:var(--teal); text-transform:uppercase}
-  .snd-mini,.snd-top{border:none; background:var(--teal); color:#fff; border-radius:50%;
-    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+  .snd-top{border:none; background:var(--teal); color:#fff; border-radius:50%;
+    width:44px; height:44px; display:flex; align-items:center; justify-content:center;
     cursor:pointer; flex:none; transition:background .15s, transform .12s}
-  .snd-mini:hover,.snd-top:hover{background:var(--teal-dark); transform:scale(1.06)}
-  .snd-top{width:44px; height:44px}
+  .snd-top:hover{background:var(--teal-dark); transform:scale(1.06)}
   .snd-top.off{background:#C9C2B6}
-  .card-snd{position:absolute; top:10px; right:10px; border:none; background:#EAF7F6;
-    color:var(--teal); border-radius:50%; width:36px; height:36px; display:flex;
-    align-items:center; justify-content:center; cursor:pointer; opacity:.55;
-    transition:opacity .15s, background .15s; z-index:2}
-  .card-snd:hover{opacity:1; background:var(--teal); color:#fff}
   .consigna{font-size:38px; font-weight:700; margin-top:14px; max-width:900px; line-height:1.25; text-align:center}
 
   .cards{display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr);
@@ -374,10 +367,7 @@
     </div>
   </div>
   <div class="play-mid">
-    <div class="tag-row">
-      <div class="consigna-tag" id="consigna-tag">Consigna</div>
-      <button class="snd-mini" id="btn-replay" type="button" title="Escuchar" aria-label="Escuchar la consigna y las tarjetas"></button>
-    </div>
+    <div class="consigna-tag" id="consigna-tag">Consigna</div>
     <div class="consigna"><span id="consigna"></span></div>
     <div class="cards" id="cards"></div>
   </div>
@@ -753,10 +743,8 @@ function playSession(id, isRepaso){
   order.forEach(idx=>{
     const name=curSession.cards[idx], slug=curSession.card_slugs[idx];
     const d=document.createElement('div'); d.className='tcard';
-    d.innerHTML='<button class="card-snd" type="button" title="Escuchar" aria-label="Escuchar esta opción">'+SPK+'</button>'+
-                '<img src="assets/cards/'+slug+'.png?v=14" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
+    d.innerHTML='<img src="assets/cards/'+slug+'.png?v=14" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
                 '<span class="lbl">'+name+'</span>';
-    d.querySelector('.card-snd').onclick=(ev)=>{ ev.stopPropagation(); speak(['assets/audio/c_'+slug+'.mp3']); };
     d.onclick=()=>answer(idx,d);
     box.appendChild(d);
   });
@@ -962,8 +950,6 @@ $('btn-rank-close').onclick=()=>$('rank-ov').classList.remove('on');
 $('btn-snd').innerHTML=muted?SPK_OFF:SPK;
 $('btn-snd').classList.toggle('off',muted);
 $('btn-snd').onclick=toggleMute;
-$('btn-replay').innerHTML=SPK;
-$('btn-replay').onclick=()=>speak(sessionVoiceSeq());
 
 /* anti-copia: bloquear selección, menú contextual y copiar fuera de los inputs */
 function blockOutsideInput(e){ const t=e.target;

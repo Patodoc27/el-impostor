@@ -195,6 +195,9 @@
   .tcard.was-ok{border-color:var(--green); opacity:.75}
   .tcard.disabled{cursor:default}
   .tcard.disabled:hover{transform:none; box-shadow:none}
+  /* sin hover hasta el primer movimiento real del mouse (el cursor puede quedar
+     justo sobre una tarjeta nueva al cerrar el feedback) */
+  #cards.cooldown .tcard:hover{transform:none; border-color:var(--border); box-shadow:0 6px 0 rgba(34,26,43,.18)}
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
   @media(max-width:1365px){
@@ -485,7 +488,7 @@
 
 <footer>Juego diseñado por <b>Patricia Inés Castro</b> · Desarrollado por Devin (Cognition AI)</footer>
 
-<script src="data.js?v=3"></script>
+<script src="data.js?v=4"></script>
 <script>
 /* ================= CONFIG ================= */
 const SHEETS_URL = "https://script.google.com/macros/s/AKfycby9rTvyPcAczXz0GuQCcD8yqiRnVBWcbQXioMm0_G_yPm9qTBlWQNzFcwujsOppRRR1/exec";
@@ -849,10 +852,12 @@ function playSession(id, isRepaso){
   const order=[0,1,2,3]; for(let i=3;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
   curOrder=order;
   const box=$('cards'); box.innerHTML='';
+  box.classList.add('cooldown');
+  box.addEventListener('mousemove', function h(){ box.classList.remove('cooldown'); box.removeEventListener('mousemove',h); });
   order.forEach(idx=>{
     const name=curSession.cards[idx], slug=curSession.card_slugs[idx];
     const d=document.createElement('div'); d.className='tcard';
-    d.innerHTML='<img src="assets/cards/'+slug+'.png?v=16" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
+    d.innerHTML='<img src="assets/cards/'+slug+'.png?v=17" onerror="this.outerHTML=\'<div class=fallback>?</div>\'">'+
                 '<span class="lbl">'+name+'</span>';
     d.onclick=()=>answer(idx,d);
     box.appendChild(d);
@@ -917,7 +922,7 @@ function stopVoice(){ sndQ=[]; if(gapT){ clearTimeout(gapT); gapT=null; } if(cur
 function playNext(){
   if(muted||!sndQ.length) return;
   const f=sndQ.shift();
-  curAudio=new Audio(f+'?v=5');
+  curAudio=new Audio(f+'?v=6');
   curAudio.onended=function(){ gapT=setTimeout(playNext,1100); };
   curAudio.onerror=function(){ gapT=setTimeout(playNext,1100); };
   curAudio.play().catch(function(){ sndQ=[]; });

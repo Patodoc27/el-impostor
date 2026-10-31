@@ -528,6 +528,12 @@ function encodeCode(){
   const bits = [];
   for(let i=1;i<=RES_N;i++){ const v=(st.res[i]||0); bits.push(v>>1&1, v&1); }
   bits.push(st.encuentro>>2&1, st.encuentro>>1&1, st.encuentro&1);
+  // tramo nuevo: puntaje + estadísticas + minutos jugados (los códigos viejos no lo traen)
+  const g=st.stats||{primera:0,repaso_ok:0,errores:0,timeouts:0};
+  const pushN=(v,n)=>{ v=Math.max(0,Math.min((1<<n)-1, v|0)); for(let b=n-1;b>=0;b--) bits.push(v>>b&1); };
+  pushN(st.score||0,14); pushN(g.primera,6); pushN(g.repaso_ok,6);
+  pushN(g.errores,6); pushN(g.timeouts,6);
+  pushN(st.t0? Math.round((Date.now()-st.t0)/60000):0,10);
   while(bits.length%5) bits.push(0);
   let s="";
   for(let i=0;i<bits.length;i+=5)
@@ -551,7 +557,16 @@ function decodeCode(code){
   const res={};
   for(let i=1;i<=resN;i++) res[i]=(bits[(i-1)*2]<<1)|bits[(i-1)*2+1];
   const encuentro=(bits[resN*2]<<2)|(bits[resN*2+1]<<1)|bits[resN*2+2];
-  return {res, encuentro: encuentro+1};
+  const out={res, encuentro: encuentro+1};
+  // tramo extra (puntaje + stats + minutos): solo si el código lo trae
+  const nb=resN*2+3;
+  if(bits.length-nb >= 48){
+    let p=nb; const take=n=>{ let v=0; for(let b=0;b<n;b++) v=(v<<1)|bits[p++]; return v; };
+    out.score=take(14);
+    out.stats={primera:take(6), repaso_ok:take(6), errores:take(6), timeouts:take(6)};
+    out.minutos=take(10);
+  }
+  return out;
 }
 
 /* ================= LOGGING ================= */
@@ -578,11 +593,11 @@ function logFinal(){
   enqueueLog({fecha:new Date().toISOString(), curso:st.seccion, tipo:"final",
     nombre:st.nombre, apellido:st.apellido, encuentro:4,
     nivel:8, sesion:0, resultado:"completo", intento:"",
-    encuentros_completados:4, sesiones_jugadas:st.results.length,
+    encuentros_completados:4,
     aciertos_primera:g.primera, aciertos_repaso:g.repaso_ok,
     errores:g.errores, timeouts:g.timeouts,
     duracion_min:durMin, puntaje:st.score||0, certificado:code,
-    aciertos:total});
+    aciertos:total, sesiones_jugadas:Object.keys(st.res).length});
 }
 
 /* ---------- ranking de mejores jugadores ---------- */
@@ -742,6 +757,7 @@ $('btn-start').onclick = () => {
     if(!d){ $('err-welcome').textContent="Ese código no parece válido. Revisalo o empezá de cero."; return; }
     if(d.encuentro>4){ $('err-welcome').textContent="Ese código ya completó los 4 encuentros."; return; }
     st.res=d.res; st.encuentro=d.encuentro;
+    if(d.score!==undefined){ st.score=d.score; st.stats=d.stats; st.t0=Date.now()-(d.minutos||0)*60000; }
   } else {
     const old=localStorage.getItem('impostor_save');
     const pkey=playerKey(nombre,apellido);
@@ -1046,6 +1062,7 @@ function showFinal(){
   $('code-note').style.display='none';
   $('btn-copy').style.display='none';
   $('done-puntos').style.display='block';
+  if(!st.certCode) st.certCode=certCode();
   $('done-puntos').textContent='Puntaje final: '+(st.score||0)+' puntos';
   $('cert-zone').style.display='block';
   makeCert().then(u=>{ $('cert-img').src=u; });

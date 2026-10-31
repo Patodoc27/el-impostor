@@ -949,7 +949,8 @@ function answer(idx, el, timedOut){
   const ok = idx===curSession.impostor;
   const leftSec=Math.max(0,Math.round(((st.timerDeadline||Date.now())-Date.now())/1000));
   const segsUsados=Math.max(0,Math.min(T_SECONDS,T_SECONDS-leftSec));
-  const puntos= ok? (curIsRepaso?40:100+leftSec*2) : 0;
+  // los puntos solo cuentan en el primer intento del nivel (los reinicios juegan pero no puntúan)
+  const puntos= ok? (curIsRepaso?40:(st.levelIntento===1? 100+leftSec : 0)) : 0;
   st.score=(st.score||0)+puntos;
   st.stats=st.stats||{primera:0,repaso_ok:0,errores:0,timeouts:0};
   if(ok){ if(curIsRepaso) st.stats.repaso_ok++; else st.stats.primera++; }
@@ -970,7 +971,7 @@ function answer(idx, el, timedOut){
   save();
   const fb=$('fb-card');
   fb.className='feedback-card '+(ok?'win':'lose');
-  $('fb-head').textContent = ok? "¡Correcto! "+curSession.impostor_name+" era el impostor · +"+puntos+" pts"
+  $('fb-head').textContent = ok? "¡Correcto! "+curSession.impostor_name+" era el impostor"+(puntos>0? " · +"+puntos+" pts":"")
                               : (timedOut? "¡Se terminó el tiempo! El impostor era "+curSession.impostor_name
                                          : "Esta vez no — el impostor era "+curSession.impostor_name);
   $('fb-text').textContent = curSession.why;

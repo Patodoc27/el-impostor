@@ -11,9 +11,12 @@
 //      en la línea que dice: const SHEETS_URL = "...".
 //      (O mandársela a Devin y la cambio yo.)
 //   La pestaña "registro" se crea sola la primera vez que llega un dato.
+//   La pestaña "guardados" guarda las partidas en curso bajo el código corto
+//   (XXXX-XXXX) que el juego le muestra al estudiante al terminar cada encuentro.
 // ============================================================
 
 const TAB_LOG = 'registro';
+const TAB_SAVE = 'guardados';   // partidas en curso, indexadas por código corto
 
 // Columnas de la planilla, en orden. El juego manda estos campos.
 const COLS = [
@@ -22,7 +25,7 @@ const COLS = [
   'repaso', 'segundos', 'puntos',
   'encuentros_completados', 'sesiones_jugadas',
   'aciertos_primera', 'aciertos_repaso', 'errores', 'timeouts',
-  'duracion_min', 'puntaje', 'certificado', 'aciertos'
+  'duracion_min', 'puntaje', 'certificado', 'titulo', 'aciertos'
 ];
 
 function sheet_() {
@@ -33,11 +36,39 @@ function sheet_() {
   return sh;
 }
 
-// El juego envía una fila JSON por evento: tipo "inicio" | "sesion" | "final".
+const SAVE_COLS = ['fecha', 'codigo', 'curso', 'nombre', 'apellido', 'estado'];
+function saveSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(TAB_SAVE);
+  if (!sh) sh = ss.insertSheet(TAB_SAVE);
+  if (sh.getLastRow() === 0) sh.appendRow(SAVE_COLS);
+  return sh;
+}
+
+// El juego envía una fila JSON por evento: tipo "inicio" | "sesion" | "final" | "guardar".
 function doPost(e) {
   try {
     const row = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    sheet_().appendRow(COLS.map(k => row[k] !== undefined ? row[k] : ''));
+    if (row.tipo === 'guardar' && row.codigo) {
+      // upsert por código: un estudiante guarda muchas veces bajo la misma clave
+      const sh = saveSheet_();
+      const cod = String(row.codigo).toUpperCase().replace(/\s/g, '');
+      const vals = sh.getDataRange().getValues();
+      for (let i = 1; i < vals.length; i++) {
+        if (String(vals[i][1]).toUpperCase() === cod) {
+          sh.getRange(i + 1, 1, 1, SAVE_COLS.length).setValues([[
+            new Date().toISOString(), cod,
+            row.curso || '', row.nombre || '', row.apellido || '', row.estado || ''
+          ]]);
+          return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      sh.appendRow([new Date().toISOString(), cod,
+        row.curso || '', row.nombre || '', row.apellido || '', row.estado || '']);
+    } else {
+      sheet_().appendRow(COLS.map(k => row[k] !== undefined ? row[k] : ''));
+    }
   } catch (err) {}
   return ContentService.createTextOutput(JSON.stringify({ ok: true }))
     .setMimeType(ContentService.MimeType.JSON);
@@ -96,7 +127,20 @@ function samePlayer_(toksA, toksB) {
   }
   return true;
 }
-function doGet() {
+function doGet(e) {
+  // ?estado=XXXX-XXXX devuelve la partida guardada bajo ese código corto
+  if (e && e.parameter && e.parameter.estado) {
+    const cod = String(e.parameter.estado).toUpperCase().replace(/\s/g, '');
+    const vals = saveSheet_().getDataRange().getValues();
+    for (let i = 1; i < vals.length; i++) {
+      if (String(vals[i][1]).toUpperCase() === cod) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: true, estado: vals[i][5] }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: false }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   const vals = sheet_().getDataRange().getValues();
   const head = vals[0] || [];
   const idx = {};
@@ -116,12 +160,14 @@ function doGet() {
       if (puntos > g.mejor_puntaje) {
         g.mejor_puntaje = puntos;
         g.nombre = r[idx.nombre]; g.apellido = r[idx.apellido];   // nombre de su mejor partida
+        g.titulo = r[idx.titulo] || '';
       }
       toks.forEach(t => { if (g.toks.indexOf(t) < 0) g.toks.push(t); });
     } else {
       groups.push({
         curso: r[idx.curso], nombre: r[idx.nombre], apellido: r[idx.apellido],
-        completadas: 1, mejor_puntaje: puntos, aciertos: aciertos, minutos: minutos, toks: toks
+        completadas: 1, mejor_puntaje: puntos, aciertos: aciertos, minutos: minutos,
+        titulo: r[idx.titulo] || '', toks: toks
       });
     }
   }

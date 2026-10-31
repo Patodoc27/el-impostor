@@ -363,7 +363,7 @@
       </div>
       <div id="code-area">
         <label>Código de progreso</label>
-        <input id="in-codigo" type="text" placeholder="XXXXX-XXXXX-…" autocomplete="off" style="font-family:monospace">
+        <input id="in-codigo" type="text" placeholder="XXXX-XXXX" autocomplete="off" style="font-family:monospace">
       </div>
       <div class="err" id="err-welcome"></div>
       <button class="cta" id="btn-start">Empezar</button>
@@ -577,7 +577,7 @@ function logFinal(){
     encuentros_completados:4,
     aciertos_primera:g.primera, aciertos_repaso:g.repaso_ok,
     errores:g.errores, timeouts:g.timeouts,
-    duracion_min:durMin, puntaje:st.score||0, certificado:code,
+    duracion_min:durMin, puntaje:st.score||0, certificado:code, titulo:titleFor(st.score||0),
     aciertos:total, sesiones_jugadas:Object.keys(st.res).length});
 }
 
@@ -593,7 +593,7 @@ function rankRow(p, i){
   if(!p) return '<div class="rank-row"><span class="rank-num" style="background:var(--soft)">'+(i+1)+'</span><span class="rank-empty">Todavía nadie</span></div>';
   return '<div class="rank-row"><span class="rank-num">'+(i+1)+'</span>'+
     '<span class="rank-name">'+esc(p.nombre)+' '+esc(p.apellido)+
-    '<span class="rank-meta">'+Number(p.mejor_puntaje||0)+' pts · '+Number(p.completadas||0)+' partida'+(p.completadas>1?'s':'')+' completada'+(p.completadas>1?'s':'')+'</span></span></div>';
+    '<span class="rank-meta">'+Number(p.mejor_puntaje||0)+' pts · '+Number(p.completadas||0)+' partida'+(p.completadas>1?'s':'')+' completada'+(p.completadas>1?'s':'')+(p.titulo?' · '+esc(p.titulo):'')+'</span></span></div>';
 }
 function rankHTML(){
   if(RANK===null) return '<div class="rank-empty" style="text-align:center;padding:10px">Cargando…</div>';
@@ -749,7 +749,24 @@ $('btn-start').onclick = () => {
   if(!nombre||!apellido||!seccion){ $('err-welcome').textContent="Completá nombre, apellido y sección."; return; }
   st = {nombre, apellido, seccion, encuentro:1, res:{}, results:[], repaso:false};
   if(code){
-    const d=decodeCode(code);
+    const clean=code.toUpperCase().replace(/\s/g,'');
+    if(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(clean)){   // código corto: la partida vive en la planilla
+      $('btn-start').disabled=true; $('err-welcome').textContent="Buscando tu partida…";
+      fetch(SHEETS_URL+'?estado='+encodeURIComponent(clean)).then(r=>r.json()).then(d=>{
+        $('btn-start').disabled=false;
+        let e2=null; try{ e2=d&&d.estado? JSON.parse(d.estado):null; }catch(x){}
+        if(!e2){ $('err-welcome').textContent="Ese código no trae ninguna partida. Revisalo."; return; }
+        st.res=e2.res||{}; st.encuentro=e2.encuentro||1; st.score=e2.score||0;
+        if(e2.stats) st.stats=e2.stats; if(e2.t0) st.t0=e2.t0;
+        if(e2.results) st.results=e2.results;
+        st.saveCode=clean; save();
+        if(st.encuentro>4){ showFinal(); return; }
+        logInicio(); setMascot('piensa'); startEncounter();
+      }).catch(()=>{ $('btn-start').disabled=false;
+        $('err-welcome').textContent="No pudimos conectar con el registro. Probá de nuevo."; });
+      return;
+    }
+    const d=decodeCode(code);   // compatibilidad con códigos largos anteriores
     if(!d){ $('err-welcome').textContent="Ese código no parece válido. Revisalo o empezá de cero."; return; }
     if(d.encuentro>4){ $('err-welcome').textContent="Ese código ya completó los 4 encuentros."; return; }
     st.res=d.res; st.encuentro=d.encuentro;
@@ -759,6 +776,7 @@ $('btn-start').onclick = () => {
     const pkey=playerKey(nombre,apellido);
     if(old){ try{const o=JSON.parse(old);
       if(playerKey(o.nombre,o.apellido)===pkey&&o.seccion===seccion) {st=o; st.nombre=nombre; st.apellido=apellido;} }catch(e){} }
+    if(!st.saveCode) st.saveCode=newSaveCode();
   }
   save();
   if(st.encuentro>4){ showFinal(); return; }
@@ -815,11 +833,11 @@ function levelComplete(lv, exhausted){
   $('lvl-badge').src='assets/badges/b'+lv+'.png';
   $('lvl-title').textContent= exhausted? 'Nivel '+lv+' completado' : '¡Nivel '+lv+' conquistado!';
   const errs=st.levelErrors||0;
-  if(!exhausted && errs===0 && res.length>0){ st.score=(st.score||0)+150; save(); }
+  if(!exhausted && errs===0 && res.length>0){ st.score=(st.score||0)+100; save(); }
   $('lvl-score').textContent = (exhausted
     ? 'Agotaste las sesiones de este nivel. Las que te costaron vuelven en el repaso.'
     : (errs===0
-      ? '¡Perfecto: '+ok+' de '+res.length+' sin errores! +150 puntos'
+      ? '¡Perfecto: '+ok+' de '+res.length+' sin errores! +100 puntos'
       : 'Lo lograste después de '+(st.levelRestarts||0)+(st.levelRestarts===1?' reinicio.':' reinicios.')))
     + ' · Puntos: '+(st.score||0);
   const ins=$('lvl-insignias'); ins.innerHTML='';
@@ -830,7 +848,7 @@ function levelComplete(lv, exhausted){
   const nextLevels=ENCOUNTERS[st.encuentro-1];
   const ni=nextLevels.indexOf(lv)+1;
   $('btn-level-next').textContent = ni<nextLevels.length? 'Jugar nivel '+nextLevels[ni] : 'Terminar encuentro';
-  setMascot('festeja'); confettiBurst(2); show('scr-level');
+  setMascot('festeja'); confettiBurst(2); pushSave(); show('scr-level');
 }
 
 $('btn-level-next').onclick=()=>{ save(); nextStep(); };
@@ -971,8 +989,10 @@ function answer(idx, el, timedOut){
   const ok = idx===curSession.impostor;
   const leftSec=Math.max(0,Math.round(((st.timerDeadline||Date.now())-Date.now())/1000));
   const segsUsados=Math.max(0,Math.min(T_SECONDS,T_SECONDS-leftSec));
-  // los puntos solo cuentan en el primer intento del nivel (los reinicios juegan pero no puntúan)
-  const puntos= ok? (curIsRepaso?40:(st.levelIntento===1? 100+leftSec : 0)) : 0;
+  // el error cuesta pero nunca anula: 1er intento del nivel = 100 + segundos restantes,
+  // 2do intento = 60, 3er intento o más = 30; el repaso siempre vale 40
+  const intentoPts = st.levelIntento===1 ? 100+leftSec : (st.levelIntento===2 ? 60 : 30);
+  const puntos= ok? (curIsRepaso?40:intentoPts) : 0;
   st.score=(st.score||0)+puntos;
   st.stats=st.stats||{primera:0,repaso_ok:0,errores:0,timeouts:0};
   if(ok){ if(curIsRepaso) st.stats.repaso_ok++; else st.stats.primera++; }
@@ -1033,15 +1053,18 @@ function endEncounter(){
   $('done-stars').innerHTML='<span style="color:var(--yellow)">'+'★'.repeat(nstars)+'</span>'+
     '<span style="color:var(--soft)">'+'★'.repeat(5-nstars)+'</span>';
   $('done-score').textContent="Resolviste bien "+ok+" de "+jugadas.length+" sesiones.";
-  $('done-code').textContent=encodeCode();
+  if(!st.saveCode) st.saveCode=newSaveCode();
+  $('done-code').textContent=st.saveCode;
   st.inEncounter=false; st.playing=null;
+  st.score=(st.score||0)+100;      // bonus por encuentro completo
   st.encuentro++;
   save();
   if(st.encuentro===5){              // cerró el encuentro 4 (st.encuentro ya se incrementó)
-    st.score=(st.score||0)+500;      // bonus por completar los 4 encuentros
+    st.score=(st.score||0)+400;      // bonus por completar el juego
     logFinal();                      // suma al ranking con el puntaje de toda la partida
     save();
   }
+  pushSave();
   $('btn-continue').textContent = st.encuentro>4? "Ver resultado final" : "Seguir jugando";
   $('btn-exit').textContent = 'Terminar por hoy';
   $('btn-exit').style.display = st.encuentro>4? 'none' : 'block';
@@ -1060,7 +1083,7 @@ function showFinal(){
   $('btn-copy').style.display='none';
   $('done-puntos').style.display='block';
   if(!st.certCode) st.certCode=certCode();
-  $('done-puntos').textContent='Puntaje final: '+(st.score||0)+' puntos';
+  $('done-puntos').textContent='Puntaje final: '+(st.score||0)+' puntos · '+titleFor(st.score||0);
   $('cert-zone').style.display='block';
   makeCert().then(u=>{ $('cert-img').src=u; });
   $('btn-continue').textContent="Volver al inicio";
@@ -1106,6 +1129,26 @@ function fallbackCopy(t){
 })();
 
 /* ---------- código y certificado ---------- */
+function titleFor(s){
+  return s>=5200?'BioLeyenda': s>=4000?'BioExperto': s>=2800?'BioEspecialista': s>=1600?'BioAprendiz':'BioNovato';
+}
+function newSaveCode(){
+  const A="23456789ABCDEFGHJKMNPQRSTUVWXYZ"; let s='';
+  for(let i=0;i<8;i++) s+=A[Math.floor(Math.random()*A.length)];
+  return s.slice(0,4)+'-'+s.slice(4);
+}
+// la partida viaja a la planilla bajo una clave corta: anotable en una hoja
+function pushSave(){
+  if(!SHEETS_URL||!st||!st.saveCode) return;
+  try{
+    fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({tipo:'guardar', codigo:st.saveCode, curso:st.seccion,
+        nombre:st.nombre, apellido:st.apellido,
+        estado:JSON.stringify({res:st.res, encuentro:st.encuentro, score:st.score||0,
+          stats:st.stats||null, t0:st.t0||0, results:st.results||[]})})})
+      .catch(function(){});
+  }catch(e){}
+}
 function certCode(){
   const s=playerKey(st.nombre,st.apellido)+'|'+canon(st.seccion)+'|'+(st.t0||0);
   let h=0; for(let i=0;i<s.length;i++){ h=(Math.imul(h,33)+s.charCodeAt(i))>>>0; }
@@ -1152,6 +1195,8 @@ function makeCert(){
     c.fillText('¡Gran detective de la biología!',700,640);
     c.font='800 46px "Segoe UI",Verdana,sans-serif'; c.fillStyle=N;
     c.fillText((st.score||0)+' puntos',700,715);
+    c.font='800 34px "Segoe UI",Verdana,sans-serif'; c.fillStyle=MD;
+    c.fillText(titleFor(st.score||0),700,752);
     c.font='700 26px "Courier New",monospace'; c.fillStyle=S;
     const hoy=new Date();
     const fecha=hoy.getDate()+'/'+(hoy.getMonth()+1)+'/'+hoy.getFullYear();

@@ -719,6 +719,14 @@ function normName(v){
   return v.trim().replace(/\s+/g,' ').split(' ')
     .map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
 }
+// clave canónica del jugador: misma persona aunque cambie el orden de nombre/apellido,
+// ponga o no acentos, dobles espacios o un segundo nombre de más
+function canon(v){ return (v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
+function playerKey(n,a){
+  const seen={}, out=[];
+  ((canon(n)+' '+canon(a)).split(' ')).forEach(w=>{ if(w && !seen[w]){ seen[w]=1; out.push(w); } });
+  return out.sort().join(' ');
+}
 $('code-link').onclick = () => { $('code-area').classList.add('open'); $('code-link').style.display='none'; };
 $('btn-start').onclick = () => {
   const nombre=normName($('in-nombre').value), apellido=normName($('in-apellido').value);
@@ -736,8 +744,9 @@ $('btn-start').onclick = () => {
     st.res=d.res; st.encuentro=d.encuentro;
   } else {
     const old=localStorage.getItem('impostor_save');
+    const pkey=playerKey(nombre,apellido);
     if(old){ try{const o=JSON.parse(old);
-      if(normName(o.nombre||'')===nombre&&normName(o.apellido||'')===apellido&&o.seccion===seccion) {st=o; st.nombre=nombre; st.apellido=apellido;} }catch(e){} }
+      if(playerKey(o.nombre,o.apellido)===pkey&&o.seccion===seccion) {st=o; st.nombre=nombre; st.apellido=apellido;} }catch(e){} }
   }
   save();
   if(st.encuentro>4){ showFinal(); return; }
@@ -848,7 +857,7 @@ function playSession(id, isRepaso){
 }
 
 /* ---------- temporizador circular (45 s por consigna) ---------- */
-const T_SECONDS=45, RING_C=176;
+const T_SECONDS=60, RING_C=176;
 let timerRAF=null;
 function startTimer(){
   stopTimer();
@@ -1085,7 +1094,7 @@ function fallbackCopy(t){
 
 /* ---------- código y certificado ---------- */
 function certCode(){
-  const s=(st.nombre||'')+'|'+(st.apellido||'')+'|'+(st.seccion||'')+'|'+(st.t0||0);
+  const s=playerKey(st.nombre,st.apellido)+'|'+canon(st.seccion)+'|'+(st.t0||0);
   let h=0; for(let i=0;i<s.length;i++){ h=(Math.imul(h,33)+s.charCodeAt(i))>>>0; }
   let out='';
   for(let i=0;i<6;i++){ out+=B32[h%32]; h=(Math.imul(h,5)+17)>>>0; }

@@ -264,7 +264,7 @@
   .intro-card p{font-size:19px; font-weight:700; color:var(--ink); margin:0 0 18px}
   .intro-btns{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
   .intro-btns .cta, .intro-btns .next{margin-top:0}
-  #btn-intro-skip[disabled]{opacity:.45; cursor:default; background:var(--ink-soft); box-shadow:0 4px 0 var(--border)}
+  .intro-btns .cta[disabled]{opacity:.6; cursor:default}
 
   /* ---------- countdown ---------- */
   .count-overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center;
@@ -486,7 +486,6 @@
     <p>¡Bienvenidos! Escuchá la presentación del juego.</p>
     <div class="intro-btns">
       <button class="cta" id="btn-intro-play" type="button">Escuchar</button>
-      <button class="next" id="btn-intro-skip" type="button" disabled>Saltear (10)</button>
     </div>
   </div>
 </div>
@@ -1029,29 +1028,16 @@ function fallbackCopy(t){
 
 /* ---------- voz de bienvenida ---------- */
 (function(){
-  const ov=$('intro-ov'), play=$('btn-intro-play'), skip=$('btn-intro-skip');
+  const ov=$('intro-ov'), play=$('btn-intro-play');
   if(muted) return;  // si el jugador silenció la voz, no mostrar la intro
   ov.classList.add('on');
-  let introAudio=null, timer=null;
-  function closeIntro(){
-    if(timer){ clearInterval(timer); timer=null; }
-    if(introAudio){ try{ introAudio.pause(); }catch(e){} }
-    ov.classList.remove('on');
-  }
+  function closeIntro(){ ov.classList.remove('on'); }
   play.onclick=function(){
-    play.style.display='none';
-    let left=10;
-    skip.disabled=true; skip.textContent='Saltear ('+left+')';
-    timer=setInterval(function(){
-      left--;
-      if(left<=0){ clearInterval(timer); timer=null; skip.disabled=false; skip.textContent='Saltear ▸'; }
-      else skip.textContent='Saltear ('+left+')';
-    },1000);
-    introAudio=new Audio('assets/audio/bienvenida.mp3?v=1');
-    introAudio.onended=function(){ closeIntro(); };
-    introAudio.play().catch(function(){ closeIntro(); });
+    play.disabled=true; play.textContent='Escuchando…';
+    const a=new Audio('assets/audio/bienvenida.mp3?v=1');
+    a.onended=function(){ closeIntro(); };
+    a.play().catch(function(){ closeIntro(); });
   };
-  skip.onclick=function(){ if(!skip.disabled) closeIntro(); };
 })();
 
 /* anti-copia: bloquear selección, menú contextual y copiar fuera de los inputs */

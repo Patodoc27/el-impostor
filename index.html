@@ -28,6 +28,8 @@
   #scr-play{background-image:url("assets/bg/fondo_juego.png")}
   #scr-level,#scr-done{background-image:url("assets/bg/fondo_final.png")}
   #scr-rules,#scr-done,#scr-level{flex-direction:row; gap:10px; padding:0 30px; justify-content:center}
+  #scr-done{overflow-y:auto}
+  #scr-done .done-card{margin-top:auto; margin-bottom:auto}
   #scr-play{flex-direction:column; padding:0; justify-content:flex-start}
   @keyframes fade{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
 
@@ -156,6 +158,8 @@
   .levelpill{background:var(--ink); border:3px solid var(--border); color:var(--durazno); font-weight:700; font-size:23px;
     padding:6px 20px; border-radius:999px; box-shadow:0 3px 0 rgba(34,26,43,.12)}
   .levelpill.boss{background:var(--coral)}
+  .scorepill{background:var(--magenta); border:3px solid var(--border); color:#fff; font-weight:800; font-size:23px;
+    padding:6px 20px; border-radius:999px; box-shadow:0 3px 0 rgba(34,26,43,.12)}
   .ring{width:64px; height:64px; position:relative; flex:none;
     background:rgba(255,255,255,.9); border:3px solid var(--border); border-radius:50%;
     box-shadow:0 3px 0 rgba(34,26,43,.15)}
@@ -291,6 +295,10 @@
     letter-spacing:2px; padding:12px 16px; border-radius:14px;
     word-break:break-all; user-select:all; display:block; max-width:560px}
   .code-note{font-size:15px; color:var(--ink-soft); margin:12px 0 4px}
+  .puntos-line{font-size:26px; font-weight:800; color:var(--naranja-dark); margin:6px 0}
+  #cert-img{display:block; width:auto; max-width:100%; max-height:250px; margin:8px auto 4px;
+    border:3px solid var(--border); border-radius:14px;
+    box-shadow:0 6px 0 rgba(34,26,43,.15)}
   .btn-copy{margin:0 auto 4px; display:inline-block; background:var(--card);
     border:2px solid var(--magenta); color:var(--magenta); font-weight:700; font-size:15px;
     padding:6px 18px; border-radius:999px; cursor:pointer; font-family:inherit}
@@ -407,6 +415,7 @@
     <div class="who" id="who"></div>
     <div class="play-top-right">
       <div class="sesion-txt" id="sesion-txt"></div>
+      <div class="scorepill" id="scorepill">0 pts</div>
       <button class="snd-top" id="btn-snd" type="button" title="Voz" aria-label="Silenciar o activar la voz"></button>
       <div class="levelpill" id="levelpill"></div>
       <div class="ring" id="ring">
@@ -461,6 +470,11 @@
     <div class="code-note" id="code-note">Anotá este código por si cambiás de compu:</div>
     <div class="codebox" id="done-code"></div>
     <button class="btn-copy" id="btn-copy" type="button">Copiar código</button>
+    <div class="puntos-line" id="done-puntos" style="display:none"></div>
+    <div id="cert-zone" style="display:none">
+      <img id="cert-img" alt="Certificado El Impostor">
+      <button class="btn-copy" id="btn-cert" type="button">Descargar certificado</button>
+    </div>
     <button class="cta" id="btn-continue">Continuar</button>
     <button class="btn-ghost" id="btn-exit">Terminar por hoy</button>
     <button class="btn-ghost" id="btn-rank" type="button">Ver mejores jugadores</button>
@@ -549,17 +563,26 @@ function enqueueLog(row){
   }catch(e){}
   flushLogs();
 }
-function logSession(sessId, resultado, isRepaso){
-  enqueueLog({fecha:new Date().toISOString(), curso:st.seccion,
+function logSession(sessId, resultado, isRepaso, segs, puntos){
+  enqueueLog({fecha:new Date().toISOString(), curso:st.seccion, tipo:"sesion",
     nombre:st.nombre, apellido:st.apellido, encuentro:st.encuentro,
-    nivel:BY_ID[sessId].level, sesion:sessId, resultado: resultado,
-    intento: isRepaso? "" : (st.levelIntento||1), tipo: isRepaso? "repaso":"nivel"});
+    nivel:BY_ID[sessId].level, sesion:sessId, consigna:BY_ID[sessId].consigna,
+    resultado: resultado, intento: isRepaso? "repaso" : (st.levelIntento||1),
+    repaso: isRepaso, segundos: segs, puntos: puntos});
 }
-function logFinal(aciertos){
-  enqueueLog({fecha:new Date().toISOString(), curso:st.seccion,
+function logFinal(){
+  const g=st.stats||{primera:0,repaso_ok:0,errores:0,timeouts:0};
+  const total=Object.values(st.res).filter(v=>v===1).length;
+  const durMin=st.t0? Math.max(1,Math.round((Date.now()-st.t0)/60000)) : 0;
+  const code=certCode(); st.certCode=code;
+  enqueueLog({fecha:new Date().toISOString(), curso:st.seccion, tipo:"final",
     nombre:st.nombre, apellido:st.apellido, encuentro:4,
-    nivel:8, sesion:0, resultado:"completo",
-    intento:"", tipo:"final", aciertos:aciertos});
+    nivel:8, sesion:0, resultado:"completo", intento:"",
+    encuentros_completados:4, sesiones_jugadas:st.results.length,
+    aciertos_primera:g.primera, aciertos_repaso:g.repaso_ok,
+    errores:g.errores, timeouts:g.timeouts,
+    duracion_min:durMin, puntaje:st.score||0, certificado:code,
+    aciertos:total});
 }
 
 /* ---------- ranking de mejores jugadores ---------- */
@@ -574,14 +597,14 @@ function rankRow(p, i){
   if(!p) return '<div class="rank-row"><span class="rank-num" style="background:var(--soft)">'+(i+1)+'</span><span class="rank-empty">Todavía nadie</span></div>';
   return '<div class="rank-row"><span class="rank-num">'+(i+1)+'</span>'+
     '<span class="rank-name">'+esc(p.nombre)+' '+esc(p.apellido)+
-    '<span class="rank-meta">'+Number(p.completadas||0)+' partida'+(p.completadas>1?'s':'')+' completada'+(p.completadas>1?'s':'')+' · '+Number(p.aciertos||0)+' aciertos</span></span></div>';
+    '<span class="rank-meta">'+Number(p.mejor_puntaje||0)+' pts · '+Number(p.completadas||0)+' partida'+(p.completadas>1?'s':'')+' completada'+(p.completadas>1?'s':'')+'</span></span></div>';
 }
 function rankHTML(){
   if(RANK===null) return '<div class="rank-empty" style="text-align:center;padding:10px">Cargando…</div>';
   let out='';
   ['1° A','1° B'].forEach(sec=>{
     const top=(RANK||[]).filter(p=>p.curso===sec)
-      .sort((a,b)=> b.completadas-a.completadas || b.aciertos-a.aciertos).slice(0,3);
+      .sort((a,b)=> (b.mejor_puntaje||0)-(a.mejor_puntaje||0) || b.completadas-a.completadas || b.aciertos-a.aciertos).slice(0,3);
     out+='<div class="rank-sec">'+sec+'</div>';
     for(let i=0;i<3;i++) out+=rankRow(top[i],i);
   });
@@ -725,6 +748,10 @@ let rulesGo=false;
 $('btn-rules').onclick = () => {
   if(rulesGo) return;
   rulesGo=true;
+  if(!st.t0){ st.t0=Date.now();
+    enqueueLog({fecha:new Date().toISOString(), curso:st.seccion, tipo:"inicio",
+      nombre:st.nombre, apellido:st.apellido});
+    save(); }
   countdown(()=>{setMascot('piensa'); startEncounter();});
 };
 
@@ -768,11 +795,13 @@ function levelComplete(lv, exhausted){
   $('lvl-badge').src='assets/badges/b'+lv+'.png';
   $('lvl-title').textContent= exhausted? 'Nivel '+lv+' completado' : '¡Nivel '+lv+' conquistado!';
   const errs=st.levelErrors||0;
-  $('lvl-score').textContent = exhausted
+  if(!exhausted && errs===0 && res.length>0){ st.score=(st.score||0)+150; save(); }
+  $('lvl-score').textContent = (exhausted
     ? 'Agotaste las sesiones de este nivel. Las que te costaron vuelven en el repaso.'
     : (errs===0
-      ? '¡Perfecto: '+ok+' de '+res.length+' sin errores!'
-      : 'Lo lograste después de '+(st.levelRestarts||0)+(st.levelRestarts===1?' reinicio.':' reinicios.'));
+      ? '¡Perfecto: '+ok+' de '+res.length+' sin errores! +150 puntos'
+      : 'Lo lograste después de '+(st.levelRestarts||0)+(st.levelRestarts===1?' reinicio.':' reinicios.')))
+    + ' · Puntos: '+(st.score||0);
   const ins=$('lvl-insignias'); ins.innerHTML='';
   for(let i=1;i<=8;i++){ const d=document.createElement('div');
     d.className='badge-slot';
@@ -799,6 +828,7 @@ function playSession(id, isRepaso){
   $('consigna-tag').textContent = isRepaso ? "Repasamos una difícil" : "Encontrá al impostor";
   setMascot('piensa');
   renderProgress();
+  $('scorepill').textContent=(st.score||0)+' pts';
   const order=[0,1,2,3]; for(let i=3;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
   curOrder=order;
   const box=$('cards'); box.innerHTML='';
@@ -917,23 +947,30 @@ function answer(idx, el, timedOut){
   stopTimer();
   document.querySelectorAll('.tcard').forEach(t=>t.classList.add('disabled'));
   const ok = idx===curSession.impostor;
+  const leftSec=Math.max(0,Math.round(((st.timerDeadline||Date.now())-Date.now())/1000));
+  const segsUsados=Math.max(0,Math.min(T_SECONDS,T_SECONDS-leftSec));
+  const puntos= ok? (curIsRepaso?40:100+leftSec*2) : 0;
+  st.score=(st.score||0)+puntos;
+  st.stats=st.stats||{primera:0,repaso_ok:0,errores:0,timeouts:0};
+  if(ok){ if(curIsRepaso) st.stats.repaso_ok++; else st.stats.primera++; }
+  else { st.stats.errores++; if(timedOut) st.stats.timeouts++; }
   document.querySelectorAll('.tcard').forEach(t=>{
     if(t.querySelector('.lbl').textContent===curSession.impostor_name) t.classList.add('was-imp');
     else t.classList.add('was-ok');
   });
   if(el) el.classList.add('picked');
   st.res[curSession.id]= ok?1:2;
-  st.results.push({id:curSession.id, ok, repaso:curIsRepaso});
+  st.results.push({id:curSession.id, ok, repaso:curIsRepaso, timeout:!!timedOut});
   st.playing=null; st.timerDeadline=null;
   if(!curIsRepaso){ st.levelResults.push({ok}); if(!ok) st.levelErrors=(st.levelErrors||0)+1; }
-  logSession(curSession.id, timedOut? "tiempo" : (ok? "bien":"mal"), curIsRepaso);
+  logSession(curSession.id, timedOut? "tiempo" : (ok? "bien":"mal"), curIsRepaso, segsUsados, puntos);
   lastWasWrong=!ok;
   sfx(ok?'win':'lose');
   stopVoice();
   save();
   const fb=$('fb-card');
   fb.className='feedback-card '+(ok?'win':'lose');
-  $('fb-head').textContent = ok? "¡Correcto! "+curSession.impostor_name+" era el impostor"
+  $('fb-head').textContent = ok? "¡Correcto! "+curSession.impostor_name+" era el impostor · +"+puntos+" pts"
                               : (timedOut? "¡Se terminó el tiempo! El impostor era "+curSession.impostor_name
                                          : "Esta vez no — el impostor era "+curSession.impostor_name);
   $('fb-text').textContent = curSession.why;
@@ -978,8 +1015,9 @@ function endEncounter(){
   st.encuentro++;
   save();
   if(st.encuentro===5){              // cerró el encuentro 4 (st.encuentro ya se incrementó)
-    const total=Object.values(st.res).filter(v=>v===1).length;
-    logFinal(total);                 // suma al ranking con los aciertos de toda la partida
+    st.score=(st.score||0)+500;      // bonus por completar los 4 encuentros
+    logFinal();                      // suma al ranking con el puntaje de toda la partida
+    save();
   }
   $('btn-continue').textContent = st.encuentro>4? "Ver resultado final" : "Seguir jugando";
   $('btn-exit').textContent = 'Terminar por hoy';
@@ -997,6 +1035,10 @@ function showFinal(){
   $('done-code').style.display='none';
   $('code-note').style.display='none';
   $('btn-copy').style.display='none';
+  $('done-puntos').style.display='block';
+  $('done-puntos').textContent='Puntaje final: '+(st.score||0)+' puntos';
+  $('cert-zone').style.display='block';
+  makeCert().then(u=>{ $('cert-img').src=u; });
   $('btn-continue').textContent="Volver al inicio";
   $('btn-exit').style.display='none';
   setMascot('festeja'); confettiBurst(5);
@@ -1039,6 +1081,76 @@ function fallbackCopy(t){
     a.play().catch(function(){ closeIntro(); });
   };
 })();
+
+/* ---------- código y certificado ---------- */
+function certCode(){
+  const s=(st.nombre||'')+'|'+(st.apellido||'')+'|'+(st.seccion||'')+'|'+(st.t0||0);
+  let h=0; for(let i=0;i<s.length;i++){ h=(Math.imul(h,33)+s.charCodeAt(i))>>>0; }
+  let out='';
+  for(let i=0;i<6;i++){ out+=B32[h%32]; h=(Math.imul(h,5)+17)>>>0; }
+  return 'IMP-'+out.slice(0,3)+'-'+out.slice(3);
+}
+function makeCert(){
+  return new Promise(function(resolve){
+    const cv2=document.createElement('canvas'); cv2.width=1400; cv2.height=990;
+    const c=cv2.getContext('2d');
+    const M='#E0308A', MD='#B01E6C', N='#FF8C42', ND='#E06B1F', P='#FFF6EC', I='#221A2B', S='#7A6B7E';
+    c.fillStyle=P; c.fillRect(0,0,1400,990);
+    c.save(); c.globalAlpha=.14;
+    c.fillStyle=M;
+    for(let i=0;i<8;i++){ c.save(); c.translate(0,70*i+40); c.rotate(-.32); c.fillRect(-300,0,760,20); c.restore(); }
+    c.fillStyle=N;
+    for(let i=0;i<8;i++){ c.save(); c.translate(1050,70*i+40); c.rotate(.32); c.fillRect(0,0,760,20); c.restore(); }
+    c.restore();
+    const cols=[M,N,'#FFD2AC','#FFFFFF'];
+    for(let i=0;i<70;i++){
+      c.save(); c.translate(50+Math.random()*1300,50+Math.random()*890);
+      c.rotate(Math.random()*Math.PI); c.globalAlpha=.45;
+      c.fillStyle=cols[i%4]; c.fillRect(0,0,9,18); c.restore(); }
+    c.globalAlpha=1;
+    c.strokeStyle=M; c.lineWidth=16; c.strokeRect(26,26,1348,938);
+    c.strokeStyle=N; c.lineWidth=6; c.strokeRect(58,58,1284,874);
+    c.fillStyle='rgba(255,255,255,.88)';
+    const rr=function(x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y);
+      c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+      c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); };
+    rr(190,160,1020,670); c.fill();
+    c.textAlign='center';
+    c.font='800 72px "Segoe UI",Verdana,sans-serif'; c.fillStyle=MD;
+    c.fillText('CERTIFICADO',700,340);
+    c.font='800 32px "Segoe UI",Verdana,sans-serif'; c.fillStyle=ND;
+    c.fillText('DE DETECTIVE DE LA BIOLOGÍA',700,388);
+    c.font='600 30px "Segoe UI",Verdana,sans-serif'; c.fillStyle=I;
+    c.fillText('Se otorga a',700,470);
+    c.font='800 62px "Segoe UI",Verdana,sans-serif'; c.fillStyle=M;
+    c.fillText(st.nombre+' '+st.apellido,700,540);
+    c.font='600 28px "Segoe UI",Verdana,sans-serif'; c.fillStyle=I;
+    c.fillText('por completar los 4 encuentros de El Impostor',700,600);
+    c.fillText('¡Gran detective de la biología!',700,640);
+    c.font='800 46px "Segoe UI",Verdana,sans-serif'; c.fillStyle=N;
+    c.fillText((st.score||0)+' puntos',700,715);
+    c.font='700 26px "Courier New",monospace'; c.fillStyle=S;
+    const hoy=new Date();
+    const fecha=hoy.getDate()+'/'+(hoy.getMonth()+1)+'/'+hoy.getFullYear();
+    c.fillText('Código: '+st.certCode+'  ·  '+fecha,700,780);
+    c.textAlign='left'; c.strokeStyle=S; c.lineWidth=2;
+    c.beginPath(); c.moveTo(250,815); c.lineTo(450,815); c.stroke();
+    c.font='600 22px "Segoe UI",Verdana,sans-serif';
+    c.fillText('Patricia Inés Castro · Docente',250,838);
+    const logo=new Image(), mas=new Image();
+    let n=0; const done=()=>{ if(++n===2) resolve(cv2.toDataURL('image/png')); };
+    logo.onload=()=>{ const lw=300, lh=lw*logo.naturalHeight/logo.naturalWidth;
+      c.drawImage(logo,700-lw/2,120,lw,lh); done(); };
+    mas.onload=()=>{ const mh=180, mw=mh*mas.naturalWidth/mas.naturalHeight;
+      c.drawImage(mas,1010,630,mw,mh); done(); };
+    logo.onerror=mas.onerror=done;
+    logo.src='assets/logo.png'; mas.src='assets/festeja.png';
+  });
+}
+$('btn-cert').onclick=function(){
+  const a=document.createElement('a');
+  a.href=$('cert-img').src; a.download='certificado-el-impostor.png'; a.click();
+};
 
 /* anti-copia: bloquear selección, menú contextual y copiar fuera de los inputs */
 function blockOutsideInput(e){ const t=e.target;

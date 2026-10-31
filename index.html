@@ -252,6 +252,20 @@
   .next:hover{background:var(--magenta-dark)}
   .next:active{transform:translateY(3px); box-shadow:0 1px 0 var(--magenta-shade)}
 
+  /* ---------- intro de voz ---------- */
+  .intro-ov{position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background-image:url("assets/bg/fondo_inicio.png"); background-size:cover; background-position:center; z-index:50}
+  .intro-ov.on{display:flex; animation:fade .25s}
+  .intro-card{background:rgba(255,255,255,.96); border:3px solid var(--border); border-radius:28px;
+    padding:30px 44px; text-align:center; max-width:560px; width:88%;
+    box-shadow:0 12px 0 rgba(34,26,43,.3); animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
+  .intro-card .logo-img{width:300px; margin-bottom:4px}
+  .intro-card .intro-mascot{display:block; height:160px; margin:2px auto 10px}
+  .intro-card p{font-size:19px; font-weight:700; color:var(--ink); margin:0 0 18px}
+  .intro-btns{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+  .intro-btns .cta, .intro-btns .next{margin-top:0}
+  #btn-intro-skip[disabled]{opacity:.45; cursor:default; background:var(--ink-soft); box-shadow:0 4px 0 var(--border)}
+
   /* ---------- countdown ---------- */
   .count-overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center;
     background:linear-gradient(160deg,#FFD9B8,#FFB88A); z-index:30}
@@ -461,6 +475,19 @@
       <div id="rank-list-ov"></div>
     </div>
     <button class="next" id="btn-rank-close" style="margin-top:14px">Cerrar</button>
+  </div>
+</div>
+
+<!-- intro de voz -->
+<div class="intro-ov" id="intro-ov">
+  <div class="intro-card">
+    <img class="logo-img" src="assets/logo.png" alt="El Impostor">
+    <img class="intro-mascot" src="assets/anima.png" alt="">
+    <p>¡Bienvenidos! Escuchá la presentación del juego.</p>
+    <div class="intro-btns">
+      <button class="cta" id="btn-intro-play" type="button">Escuchar</button>
+      <button class="next" id="btn-intro-skip" type="button" disabled>Saltear (10)</button>
+    </div>
   </div>
 </div>
 
@@ -999,6 +1026,33 @@ function fallbackCopy(t){
   const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
   document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove();
 }
+
+/* ---------- voz de bienvenida ---------- */
+(function(){
+  const ov=$('intro-ov'), play=$('btn-intro-play'), skip=$('btn-intro-skip');
+  if(muted) return;  // si el jugador silenció la voz, no mostrar la intro
+  ov.classList.add('on');
+  let introAudio=null, timer=null;
+  function closeIntro(){
+    if(timer){ clearInterval(timer); timer=null; }
+    if(introAudio){ try{ introAudio.pause(); }catch(e){} }
+    ov.classList.remove('on');
+  }
+  play.onclick=function(){
+    play.style.display='none';
+    let left=10;
+    skip.disabled=true; skip.textContent='Saltear ('+left+')';
+    timer=setInterval(function(){
+      left--;
+      if(left<=0){ clearInterval(timer); timer=null; skip.disabled=false; skip.textContent='Saltear ▸'; }
+      else skip.textContent='Saltear ('+left+')';
+    },1000);
+    introAudio=new Audio('assets/audio/bienvenida.mp3?v=1');
+    introAudio.onended=function(){ closeIntro(); };
+    introAudio.play().catch(function(){ closeIntro(); });
+  };
+  skip.onclick=function(){ if(!skip.disabled) closeIntro(); };
+})();
 
 /* anti-copia: bloquear selección, menú contextual y copiar fuera de los inputs */
 function blockOutsideInput(e){ const t=e.target;

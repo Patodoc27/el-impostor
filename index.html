@@ -1122,7 +1122,7 @@ function fallbackCopy(t){
   function closeIntro(){ ov.classList.remove('on'); }
   play.onclick=function(){
     play.disabled=true; play.textContent='Escuchando…';
-    const a=new Audio('assets/audio/bienvenida.mp3?v=1');
+    const a=new Audio('assets/audio/bienvenida.mp3?v=2');
     a.onended=function(){ closeIntro(); };
     a.play().catch(function(){ closeIntro(); });
   };
